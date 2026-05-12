@@ -22,18 +22,16 @@ import {
   Edit3,
   ChevronRight,
   Heart,
-  Eye,
-  Search,
-  BarChart3,
-  UserPlus,
-  UserCheck,
-  Clock,
   FileText,
   ExternalLink,
   X,
   Save,
   Upload,
   Check,
+  UserPlus,
+  UserCheck,
+  Clock,
+  Camera,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -44,7 +42,9 @@ export default function ProfilePage() {
   const profileId = params.id as string;
   const [profile, setProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [activeTab, setActiveTab] = useState<"posts" | "about" | "activity">("about");
+  const [activeTab, setActiveTab] = useState<"posts" | "about" | "activity">(
+    "about"
+  );
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
 
@@ -217,7 +217,9 @@ export default function ProfilePage() {
         <div className="max-w-4xl mx-auto px-4 py-12 text-center">
           <div className="card p-12">
             <GraduationCap className="w-12 h-12 text-tetr-gray mx-auto mb-4 opacity-40" />
-            <p className="text-lg font-semibold text-gray-900">User not found</p>
+            <p className="text-lg font-semibold text-gray-900">
+              User not found
+            </p>
             <p className="text-sm text-tetr-gray mt-1">
               This profile may have been removed or does not exist.
             </p>
@@ -254,599 +256,461 @@ export default function ProfilePage() {
     general_management: "General Management",
   };
 
-  const renderConnectButton = () => {
-    if (isOwnProfile) {
-      return (
-        <button
-          onClick={openEditModal}
-          className="btn-secondary flex items-center gap-1.5 text-sm"
-        >
-          <Edit3 className="w-4 h-4" />
-          Edit Profile
-        </button>
-      );
-    }
-
-    if (connectionStatus === "accepted") {
-      return (
-        <button
-          disabled
-          className="flex items-center gap-1.5 text-sm px-4 py-2 bg-tetr-green-bg text-tetr-green rounded-full font-medium cursor-default"
-        >
-          <UserCheck className="w-4 h-4" />
-          Connected
-        </button>
-      );
-    }
-
-    if (connectionStatus === "pending_sent") {
-      return (
-        <button
-          onClick={handleWithdrawConnection}
-          disabled={connectLoading}
-          className="btn-secondary flex items-center gap-1.5 text-sm"
-        >
-          <Clock className="w-4 h-4" />
-          {connectLoading ? "..." : "Pending"}
-        </button>
-      );
-    }
-
-    if (connectionStatus === "pending_received") {
-      return (
-        <button
-          onClick={handleAcceptConnection}
-          disabled={connectLoading}
-          className="btn-primary flex items-center gap-1.5 text-sm"
-        >
-          <UserCheck className="w-4 h-4" />
-          {connectLoading ? "..." : "Accept"}
-        </button>
-      );
-    }
-
-    return (
-      <button
-        onClick={handleConnect}
-        disabled={connectLoading}
-        className="btn-secondary flex items-center gap-1.5 text-sm"
-      >
-        <UserPlus className="w-4 h-4" />
-        {connectLoading ? "..." : "Connect"}
-      </button>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-tetr-gray-light">
       <Header />
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
-        {/* Profile Card */}
+      <div className="max-w-[900px] mx-auto px-4 py-6 space-y-4">
+        {/* ═══════════════════ PROFILE CARD (LinkedIn-style) ═══════════════════ */}
         <div className="card overflow-hidden">
-          {/* Cover photo */}
-          <div className="h-48 sm:h-56 bg-gradient-to-br from-tetr-dark via-tetr-green to-tetr-green-light relative">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-8 left-12 w-32 h-32 rounded-full border-2 border-white/20" />
-              <div className="absolute bottom-4 right-16 w-48 h-48 rounded-full border-2 border-white/20" />
-              <div className="absolute top-16 right-32 w-16 h-16 rounded-full border-2 border-white/20" />
+          {/* Cover photo - just the gradient, no text on it */}
+          <div className="h-[200px] bg-gradient-to-br from-tetr-dark via-tetr-green to-tetr-green-light relative">
+            <div className="absolute inset-0 opacity-[0.07]">
+              <div className="absolute top-6 left-10 w-28 h-28 rounded-full border-2 border-white" />
+              <div className="absolute bottom-2 right-12 w-40 h-40 rounded-full border-2 border-white" />
+              <div className="absolute top-14 right-28 w-14 h-14 rounded-full border-2 border-white" />
             </div>
+            {isOwnProfile && (
+              <button className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors" title="Change cover photo (coming soon)">
+                <Camera className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {/* Profile info */}
-          <div className="px-6 sm:px-8 pb-6 -mt-16 sm:-mt-20 relative">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-              <div className="ring-4 ring-white rounded-full shadow-lg">
-                <Avatar
-                  name={profile.fullName}
-                  avatarUrl={profile.avatarUrl}
-                  size="xl"
-                />
-              </div>
-              <div className="flex-1 sm:pb-1">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                      {profile.fullName}
-                    </h1>
-                    {profile.aboutLine && (
-                      <p className="text-sm text-gray-600 mt-0.5 max-w-md">
-                        {profile.aboutLine}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {!isOwnProfile && (
-                      <Link
-                        href={`/messages?with=${profile.id}`}
-                        className="btn-primary flex items-center gap-1.5 text-sm"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        Message
-                      </Link>
-                    )}
-                    {renderConnectButton()}
-                  </div>
+          {/* Profile info section - WHITE BACKGROUND */}
+          <div className="relative px-6 sm:px-8 pb-6 bg-white">
+            {/* Avatar - overlapping cover/white boundary */}
+            <div className="-mt-[60px] mb-3 flex items-end justify-between">
+              <div className="relative">
+                <div className="ring-4 ring-white rounded-full shadow-lg bg-white">
+                  <Avatar
+                    name={profile.fullName}
+                    avatarUrl={profile.avatarUrl}
+                    size="xl"
+                  />
                 </div>
+                {isOwnProfile && (
+                  <button
+                    className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
+                    title="Change photo (coming soon)"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-gray-600" />
+                  </button>
+                )}
+              </div>
+              {/* Edit button positioned at top right of info section on desktop */}
+              <div className="hidden sm:flex items-center gap-2 pt-2">
+                {isOwnProfile && (
+                  <button
+                    onClick={openEditModal}
+                    className="p-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                    title="Edit profile"
+                  >
+                    <Edit3 className="w-5 h-5 text-gray-600" />
+                  </button>
+                )}
+              </div>
+            </div>
 
-                {/* Meta info row */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm text-tetr-gray">
-                  {profile.batch && (
-                    <span className="flex items-center gap-1">
-                      <GraduationCap className="w-4 h-4" />
-                      Batch {profile.batch}
+            {/* Name & headline - on WHITE background, fully readable */}
+            <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+              {profile.fullName}
+            </h1>
+            {profile.aboutLine && (
+              <p className="text-base text-gray-600 mt-1">{profile.aboutLine}</p>
+            )}
+
+            {/* Location & education line */}
+            <div className="flex flex-wrap items-center gap-x-1 mt-2 text-sm text-gray-500">
+              {profile.batch && (
+                <span>Batch {profile.batch}</span>
+              )}
+              {profile.batch && <span>&middot;</span>}
+              <span className="capitalize">{profile.role}</span>
+              <span>&middot;</span>
+              <span>TETR College of Business</span>
+            </div>
+
+            {/* Connections count - clickable like LinkedIn */}
+            <div className="mt-2">
+              <span className="text-sm font-semibold text-tetr-green hover:underline cursor-pointer">
+                {connectionCount} connection{connectionCount !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Action buttons row */}
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              {isOwnProfile ? (
+                <>
+                  <button
+                    onClick={openEditModal}
+                    className="px-5 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors"
+                  >
+                    Edit Profile
+                  </button>
+                  <Link
+                    href="/feed"
+                    className="px-5 py-1.5 border border-tetr-green text-tetr-green text-sm font-semibold rounded-full hover:bg-tetr-green-bg transition-colors"
+                  >
+                    Add Post
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {/* Connect / Pending / Connected button */}
+                  {connectionStatus === "accepted" ? (
+                    <span className="px-5 py-1.5 bg-tetr-green-bg text-tetr-green text-sm font-semibold rounded-full flex items-center gap-1.5 cursor-default">
+                      <UserCheck className="w-4 h-4" />
+                      Connected
                     </span>
+                  ) : connectionStatus === "pending_sent" ? (
+                    <button
+                      onClick={handleWithdrawConnection}
+                      disabled={connectLoading}
+                      className="px-5 py-1.5 border border-gray-300 text-gray-600 text-sm font-semibold rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                    >
+                      <Clock className="w-4 h-4" />
+                      {connectLoading ? "..." : "Pending"}
+                    </button>
+                  ) : connectionStatus === "pending_received" ? (
+                    <button
+                      onClick={handleAcceptConnection}
+                      disabled={connectLoading}
+                      className="px-5 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors flex items-center gap-1.5"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      {connectLoading ? "..." : "Accept Request"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleConnect}
+                      disabled={connectLoading}
+                      className="px-5 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors flex items-center gap-1.5"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      {connectLoading ? "..." : "Connect"}
+                    </button>
                   )}
-                  <span className="flex items-center gap-1 capitalize">
-                    <Briefcase className="w-4 h-4" />
-                    {profile.role}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    TETR College of Business
-                  </span>
-                </div>
 
-                {/* Stats row */}
-                <div className="flex items-center gap-4 mt-3">
-                  <span className="text-sm">
-                    <strong className="text-gray-900">{connectionCount}</strong>{" "}
-                    <span className="text-tetr-gray">
-                      connection{connectionCount !== 1 ? "s" : ""}
-                    </span>
-                  </span>
-                  <span className="text-sm">
-                    <strong className="text-gray-900">{clubCount}</strong>{" "}
-                    <span className="text-tetr-gray">
-                      club{clubCount !== 1 ? "s" : ""}
-                    </span>
-                  </span>
-                  <span className="text-sm">
-                    <strong className="text-gray-900">{postCount}</strong>{" "}
-                    <span className="text-tetr-gray">
-                      post{postCount !== 1 ? "s" : ""}
-                    </span>
-                  </span>
-                  <span className="text-sm text-tetr-gray">
-                    Member since {memberSince}
-                  </span>
-                </div>
-              </div>
+                  {/* Message button */}
+                  <Link
+                    href={`/messages?with=${profile.id}`}
+                    className="px-5 py-1.5 border border-tetr-green text-tetr-green text-sm font-semibold rounded-full hover:bg-tetr-green-bg transition-colors flex items-center gap-1.5"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Message
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Left column */}
-          <div className="lg:col-span-4 space-y-4">
-            {/* Analytics card (own profile) */}
+        {/* ═══════════════════ ABOUT SECTION ═══════════════════ */}
+        {profile.aboutLine && (
+          <div className="card p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">About</h2>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              {profile.expertise || profile.aboutLine}
+            </p>
+          </div>
+        )}
+
+        {/* ═══════════════════ ACTIVITY SECTION ═══════════════════ */}
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Activity</h2>
+              <p className="text-sm text-tetr-gray">
+                {postCount} post{postCount !== 1 ? "s" : ""}
+              </p>
+            </div>
             {isOwnProfile && (
-              <div className="card p-5 animate-slide-up">
-                <h3 className="section-title text-base mb-4">
-                  <BarChart3 className="w-5 h-5 text-tetr-green" />
-                  Profile Analytics
-                </h3>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center p-3 bg-tetr-gray-light rounded-xl">
-                    <Eye className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-                    <p className="text-xl font-bold text-gray-900">48</p>
-                    <p className="text-[11px] text-tetr-gray">Profile views</p>
-                  </div>
-                  <div className="text-center p-3 bg-tetr-gray-light rounded-xl">
-                    <Users className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-                    <p className="text-xl font-bold text-gray-900">{connectionCount}</p>
-                    <p className="text-[11px] text-tetr-gray">Connections</p>
-                  </div>
-                  <div className="text-center p-3 bg-tetr-gray-light rounded-xl">
-                    <TrendingUp className="w-5 h-5 text-tetr-green mx-auto mb-1" />
-                    <p className="text-xl font-bold text-gray-900">{postCount}</p>
-                    <p className="text-[11px] text-tetr-gray">Posts</p>
-                  </div>
+              <Link
+                href="/feed"
+                className="px-4 py-1.5 border border-tetr-green text-tetr-green text-sm font-semibold rounded-full hover:bg-tetr-green-bg transition-colors"
+              >
+                Create a post
+              </Link>
+            )}
+          </div>
+
+          {/* Tabs inside Activity */}
+          <div className="flex border-b border-tetr-border mb-4">
+            {(["posts", "about", "activity"] as const).map((tab) => {
+              const labels: Record<string, string> = {
+                posts: "Posts",
+                about: "Details",
+                activity: "Timeline",
+              };
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2.5 text-sm font-semibold transition-colors relative ${
+                    activeTab === tab
+                      ? "text-tetr-green"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {labels[tab]}
+                  {activeTab === tab && (
+                    <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-tetr-green rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Posts Tab */}
+          {activeTab === "posts" && (
+            <div className="animate-fade-in">
+              {loadingPosts ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-tetr-green border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : allPosts.length === 0 ? (
+                <div className="text-center py-10">
+                  <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">
+                    {isOwnProfile
+                      ? "You haven't shared any posts yet."
+                      : `${profile.fullName.split(" ")[0]} hasn't shared any posts yet.`}
+                  </p>
+                  {isOwnProfile && (
+                    <Link
+                      href="/feed"
+                      className="inline-block mt-3 px-5 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors"
+                    >
+                      Create your first post
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {allPosts.map((post: any) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Details Tab (previously About) */}
+          {activeTab === "about" && (
+            <div className="space-y-5 animate-fade-in">
+              {/* Education */}
+              <div className="flex items-start gap-4 p-4 rounded-xl border border-gray-100">
+                <img
+                  src="/tetr-logo.svg"
+                  alt="TETR"
+                  className="w-12 h-12 rounded-lg object-contain bg-white p-1 border border-gray-100 shrink-0"
+                />
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    TETR College of Business
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {profile.program || "Management & Technology"}
+                  </p>
+                  {profile.batch && (
+                    <p className="text-sm text-gray-500">
+                      Batch {profile.batch}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    Joined {memberSince}
+                  </p>
                 </div>
               </div>
-            )}
 
-            {/* About card */}
-            <div className="card p-5 animate-slide-up">
-              <h3 className="section-title text-base mb-4">
-                <Globe className="w-5 h-5 text-tetr-green" />
-                About
-              </h3>
-
+              {/* Skills */}
               {profile.expertise && (
-                <div className="mb-4">
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {profile.expertise}
-                  </p>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 mb-2">
+                    Skills & Expertise
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.expertise.split(",").map((skill: string, i: number) => (
+                      <span
+                        key={i}
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-full"
+                      >
+                        {skill.trim()}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <div className="space-y-3">
-                {profile.excitedField && (
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="w-4 h-4 text-tetr-green mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-xs text-tetr-gray uppercase tracking-wide font-medium">
-                        Interested in
-                      </p>
-                      <p className="text-sm text-gray-900 font-medium">
-                        {fieldIconMap[profile.excitedField] || profile.excitedField}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {profile.experienceLevel && (
-                  <div className="flex items-start gap-3">
-                    <Award className="w-4 h-4 text-tetr-green mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-xs text-tetr-gray uppercase tracking-wide font-medium">
-                        Experience level
-                      </p>
-                      <p className="text-sm text-gray-900 font-medium">
+              {/* Interests */}
+              {(profile.excitedField || profile.experienceLevel) && (
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 mb-2">
+                    Interests
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.excitedField && (
+                      <span className="px-3 py-1.5 bg-tetr-green-bg text-tetr-green text-sm font-medium rounded-full">
+                        {fieldIconMap[profile.excitedField] ||
+                          profile.excitedField}
+                      </span>
+                    )}
+                    {profile.experienceLevel && (
+                      <span className="px-3 py-1.5 bg-gray-100 text-gray-600 text-sm rounded-full">
                         {experienceMap[profile.experienceLevel] ||
                           profile.experienceLevel}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-4 h-4 text-tetr-green mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-tetr-gray uppercase tracking-wide font-medium">
-                      Joined
-                    </p>
-                    <p className="text-sm text-gray-900 font-medium">
-                      {memberSince}
-                    </p>
+                      </span>
+                    )}
                   </div>
                 </div>
-              </div>
-            </div>
+              )}
 
-            {/* Resume card */}
-            {(profile.resumeUrl || isOwnProfile) && (
-              <div className="card p-5 animate-slide-up">
-                <h3 className="section-title text-base mb-4">
-                  <FileText className="w-5 h-5 text-tetr-green" />
-                  Resume
-                </h3>
-                {profile.resumeUrl ? (
+              {/* Resume */}
+              {profile.resumeUrl && (
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 mb-2">
+                    Resume
+                  </h3>
                   <a
                     href={profile.resumeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 bg-tetr-gray-light rounded-xl hover:bg-gray-100 transition-colors group"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors group"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shrink-0">
-                      <FileText className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 group-hover:text-tetr-green transition-colors">
-                        {profile.fullName}&apos;s Resume
+                        View Resume
                       </p>
-                      <p className="text-xs text-tetr-gray truncate">
+                      <p className="text-xs text-gray-400 truncate max-w-[250px]">
                         {profile.resumeUrl}
                       </p>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-tetr-gray group-hover:text-tetr-green transition-colors shrink-0" />
+                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-tetr-green ml-2 shrink-0" />
                   </a>
-                ) : isOwnProfile ? (
-                  <div className="text-center py-4">
-                    <Upload className="w-8 h-8 text-tetr-gray mx-auto mb-2 opacity-40" />
-                    <p className="text-sm text-tetr-gray mb-3">
-                      Add your resume link to showcase your experience
-                    </p>
-                    <button
-                      onClick={openEditModal}
-                      className="btn-primary text-sm"
-                    >
-                      Add Resume Link
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            {/* Clubs card */}
-            {clubCount > 0 && (
-              <div className="card p-5 animate-slide-up">
-                <h3 className="section-title text-base mb-4">
-                  <BookOpen className="w-5 h-5 text-tetr-green" />
-                  Clubs & Societies
-                </h3>
-                <div className="space-y-3">
-                  {profile.clubMembers.map((cm: any) => (
-                    <Link
-                      key={cm.club.id}
-                      href={`/clubs/${cm.club.id}`}
-                      className="flex items-center gap-3 p-2.5 -mx-2.5 rounded-xl hover:bg-tetr-gray-light transition-colors group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-tetr-green to-tetr-green-light flex items-center justify-center text-white text-sm font-bold shrink-0">
-                        {cm.club.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate group-hover:text-tetr-green transition-colors">
-                          {cm.club.name}
-                        </p>
-                        <p className="text-xs text-tetr-gray capitalize">
-                          {cm.role} &middot; Member
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-tetr-gray opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right column (main content) */}
-          <div className="lg:col-span-8 space-y-4">
-            {/* Tabs */}
-            <div className="card overflow-hidden">
-              <div className="flex border-b border-tetr-border">
-                {(["about", "posts", "activity"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-3.5 text-sm font-medium transition-colors relative ${
-                      activeTab === tab
-                        ? "text-tetr-green"
-                        : "text-tetr-gray hover:text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    {activeTab === tab && (
-                      <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-tetr-green rounded-full" />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* About Tab */}
-              {activeTab === "about" && (
-                <div className="p-6 space-y-6 animate-fade-in">
-                  {/* Education section */}
-                  <div>
-                    <h4 className="section-title text-sm mb-3">
-                      <GraduationCap className="w-4 h-4 text-tetr-green" />
-                      Education
-                    </h4>
-                    <div className="flex items-start gap-4 p-4 bg-tetr-gray-light rounded-xl">
-                      <img src="/tetr-logo.svg" alt="TETR" className="w-12 h-12 rounded-xl object-contain bg-white p-1 border border-gray-200 shrink-0" />
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          TETR College of Business
-                        </p>
-                        {profile.batch && (
-                          <p className="text-sm text-gray-600">
-                            Batch {profile.batch}
-                          </p>
-                        )}
-                        <p className="text-sm text-tetr-gray capitalize">
-                          {profile.role}
-                        </p>
-                        <p className="text-xs text-tetr-gray mt-1">
-                          Joined {memberSince}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Skills & Expertise */}
-                  {profile.expertise && (
-                    <div>
-                      <h4 className="section-title text-sm mb-3">
-                        <Award className="w-4 h-4 text-tetr-green" />
-                        Skills & Expertise
-                      </h4>
-                      <p className="text-sm text-gray-700 leading-relaxed p-4 bg-tetr-gray-light rounded-xl">
-                        {profile.expertise}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Interests & Goals */}
-                  {(profile.excitedField || profile.experienceLevel) && (
-                    <div>
-                      <h4 className="section-title text-sm mb-3">
-                        <Sparkles className="w-4 h-4 text-tetr-green" />
-                        Interests & Goals
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {profile.excitedField && (
-                          <span className="badge badge-green text-sm py-1.5 px-4">
-                            {fieldIconMap[profile.excitedField] || profile.excitedField}
-                          </span>
-                        )}
-                        {profile.experienceLevel && (
-                          <span className="badge badge-gray text-sm py-1.5 px-4">
-                            {experienceMap[profile.experienceLevel] || profile.experienceLevel}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Resume in About tab */}
-                  {profile.resumeUrl && (
-                    <div>
-                      <h4 className="section-title text-sm mb-3">
-                        <FileText className="w-4 h-4 text-tetr-green" />
-                        Resume
-                      </h4>
-                      <a
-                        href={profile.resumeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-4 bg-tetr-gray-light rounded-xl hover:bg-gray-100 transition-colors group"
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shrink-0">
-                          <FileText className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 group-hover:text-tetr-green transition-colors">
-                            View Resume
-                          </p>
-                          <p className="text-xs text-tetr-gray truncate">
-                            {profile.resumeUrl}
-                          </p>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-tetr-gray group-hover:text-tetr-green transition-colors" />
-                      </a>
-                    </div>
-                  )}
-
-                  {/* Recent activity summary */}
-                  {postCount > 0 && (
-                    <div>
-                      <h4 className="section-title text-sm mb-3">
-                        <TrendingUp className="w-4 h-4 text-tetr-green" />
-                        Recent Activity
-                      </h4>
-                      <div className="space-y-2">
-                        {profile.posts?.slice(0, 3).map((post: any) => (
-                          <div
-                            key={post.id}
-                            className="p-3 border border-tetr-border rounded-xl hover:bg-tetr-gray-light transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              {post.type !== "General" && (
-                                <span className="badge badge-green text-[10px]">
-                                  {post.type}
-                                </span>
-                              )}
-                              <span className="text-xs text-tetr-gray">
-                                {formatDistanceToNow(new Date(post.createdAt), {
-                                  addSuffix: true,
-                                })}
-                              </span>
-                            </div>
-                            {post.title && (
-                              <p className="text-sm font-medium text-gray-900">
-                                {post.title}
-                              </p>
-                            )}
-                            <p className="text-sm text-gray-600 line-clamp-2">
-                              {post.body}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                      {postCount > 3 && (
-                        <button
-                          onClick={() => setActiveTab("posts")}
-                          className="mt-3 text-sm text-tetr-green font-medium hover:underline flex items-center gap-1"
-                        >
-                          View all {postCount} posts
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Posts Tab */}
-              {activeTab === "posts" && (
-                <div className="p-4 animate-fade-in">
-                  {loadingPosts ? (
-                    <div className="flex justify-center py-12">
-                      <div className="w-6 h-6 border-2 border-tetr-green border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : allPosts.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FileText className="w-10 h-10 text-tetr-gray mx-auto mb-3 opacity-40" />
-                      <p className="text-sm text-tetr-gray">
-                        {isOwnProfile
-                          ? "You haven't shared any posts yet."
-                          : `${profile.fullName.split(" ")[0]} hasn't shared any posts yet.`}
-                      </p>
-                      {isOwnProfile && (
-                        <Link href="/feed" className="btn-primary inline-block mt-3 text-sm">
-                          Create your first post
-                        </Link>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {allPosts.map((post: any) => (
-                        <PostCard key={post.id} post={post} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Activity Tab */}
-              {activeTab === "activity" && (
-                <div className="p-6 animate-fade-in">
-                  {loadingPosts ? (
-                    <div className="flex justify-center py-12">
-                      <div className="w-6 h-6 border-2 border-tetr-green border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : allPosts.length === 0 ? (
-                    <div className="text-center py-12">
-                      <TrendingUp className="w-10 h-10 text-tetr-gray mx-auto mb-3 opacity-40" />
-                      <p className="text-sm text-tetr-gray">No activity yet.</p>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      {/* Timeline line */}
-                      <div className="absolute left-5 top-2 bottom-2 w-px bg-tetr-border" />
-                      <div className="space-y-6">
-                        {allPosts.map((post: any) => (
-                          <div key={post.id} className="flex gap-4 relative">
-                            <div className="w-10 h-10 rounded-full bg-tetr-green-bg border-2 border-tetr-border flex items-center justify-center shrink-0 z-10">
-                              <FileText className="w-4 h-4 text-tetr-green" />
-                            </div>
-                            <div className="flex-1 p-4 border border-tetr-border rounded-xl hover:shadow-sm transition-shadow">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs text-tetr-gray">
-                                  {formatDistanceToNow(new Date(post.createdAt), {
-                                    addSuffix: true,
-                                  })}
-                                </span>
-                                {post.type !== "General" && (
-                                  <span className="badge badge-green text-[10px]">
-                                    {post.type}
-                                  </span>
-                                )}
-                              </div>
-                              {post.title && (
-                                <p className="text-sm font-semibold text-gray-900">
-                                  {post.title}
-                                </p>
-                              )}
-                              <p className="text-sm text-gray-600 line-clamp-3 mt-0.5">
-                                {post.body}
-                              </p>
-                              <div className="mt-2 flex items-center gap-4 text-xs text-tetr-gray">
-                                <span className="flex items-center gap-1">
-                                  <Heart className="w-3 h-3" />
-                                  {post.likes?.length || 0}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <MessageSquare className="w-3 h-3" />
-                                  {post.comments?.length || 0}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* Timeline Tab */}
+          {activeTab === "activity" && (
+            <div className="animate-fade-in">
+              {loadingPosts ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-tetr-green border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : allPosts.length === 0 ? (
+                <div className="text-center py-10">
+                  <TrendingUp className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">No activity yet.</p>
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="absolute left-5 top-2 bottom-2 w-px bg-gray-200" />
+                  <div className="space-y-5">
+                    {allPosts.map((post: any) => (
+                      <div key={post.id} className="flex gap-4 relative">
+                        <div className="w-10 h-10 rounded-full bg-tetr-green-bg border-2 border-white flex items-center justify-center shrink-0 z-10 shadow-sm">
+                          <FileText className="w-4 h-4 text-tetr-green" />
+                        </div>
+                        <div className="flex-1 p-4 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow bg-white">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs text-gray-400">
+                              {formatDistanceToNow(new Date(post.createdAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                            {post.type !== "General" && (
+                              <span className="badge badge-green text-[10px]">
+                                {post.type}
+                              </span>
+                            )}
+                          </div>
+                          {post.title && (
+                            <p className="text-sm font-semibold text-gray-900">
+                              {post.title}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-600 line-clamp-3 mt-0.5">
+                            {post.body}
+                          </p>
+                          <div className="mt-2 flex items-center gap-4 text-xs text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <Heart className="w-3 h-3" />
+                              {post.likes?.length || 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3" />
+                              {post.comments?.length || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ═══════════════════ SIDEBAR SECTIONS (on wider screens they stack below) ═══════════════════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Resume card (own profile, if no resume yet) */}
+          {isOwnProfile && !profile.resumeUrl && (
+            <div className="card p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-3">Resume</h2>
+              <div className="text-center py-4">
+                <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 mb-3">
+                  Add your resume link to showcase your experience
+                </p>
+                <button
+                  onClick={openEditModal}
+                  className="px-5 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors"
+                >
+                  Add Resume Link
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Clubs card */}
+          {clubCount > 0 && (
+            <div className="card p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-3">
+                Clubs & Societies
+              </h2>
+              <div className="space-y-3">
+                {profile.clubMembers.map((cm: any) => (
+                  <Link
+                    key={cm.club.id}
+                    href={`/clubs/${cm.club.id}`}
+                    className="flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-tetr-green to-tetr-green-light flex items-center justify-center text-white text-sm font-bold shrink-0">
+                      {cm.club.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate group-hover:text-tetr-green transition-colors">
+                        {cm.club.name}
+                      </p>
+                      <p className="text-xs text-gray-400 capitalize">
+                        {cm.role}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
+      {/* ═══════════════════ EDIT PROFILE MODAL ═══════════════════ */}
       {showEditModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
@@ -855,7 +719,7 @@ export default function ProfilePage() {
           />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in">
             {/* Modal header */}
-            <div className="sticky top-0 bg-white border-b border-tetr-border px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
               <h2 className="text-lg font-bold text-gray-900">Edit Profile</h2>
               <button
                 onClick={() => setShowEditModal(false)}
@@ -867,7 +731,6 @@ export default function ProfilePage() {
 
             {/* Modal body */}
             <div className="p-6 space-y-5">
-              {/* Full Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Full Name <span className="text-red-500">*</span>
@@ -875,13 +738,14 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   value={editForm.fullName}
-                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, fullName: e.target.value })
+                  }
                   className="input-field"
                   placeholder="Your full name"
                 />
               </div>
 
-              {/* About / Headline */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Headline
@@ -889,20 +753,23 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   value={editForm.aboutLine}
-                  onChange={(e) => setEditForm({ ...editForm, aboutLine: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, aboutLine: e.target.value })
+                  }
                   className="input-field"
                   placeholder="e.g. Finance Major | Aspiring Consultant"
                 />
               </div>
 
-              {/* Batch */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Batch
                 </label>
                 <select
                   value={editForm.batch}
-                  onChange={(e) => setEditForm({ ...editForm, batch: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, batch: e.target.value })
+                  }
                   className="input-field"
                 >
                   <option value="">Select batch</option>
@@ -912,28 +779,30 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* Skills & Expertise */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Skills & Expertise
                 </label>
                 <textarea
                   value={editForm.expertise}
-                  onChange={(e) => setEditForm({ ...editForm, expertise: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, expertise: e.target.value })
+                  }
                   className="input-field min-h-[80px] resize-none"
                   placeholder="e.g. Financial modeling, Python, Data Analysis"
                   rows={3}
                 />
               </div>
 
-              {/* Field of Interest */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Field of Interest
                 </label>
                 <select
                   value={editForm.excitedField}
-                  onChange={(e) => setEditForm({ ...editForm, excitedField: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, excitedField: e.target.value })
+                  }
                   className="input-field"
                 >
                   <option value="">Select field</option>
@@ -950,46 +819,49 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* Experience Level */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Experience Level
                 </label>
                 <select
                   value={editForm.experienceLevel}
-                  onChange={(e) => setEditForm({ ...editForm, experienceLevel: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      experienceLevel: e.target.value,
+                    })
+                  }
                   className="input-field"
                 >
                   <option value="">Select level</option>
                   <option value="Intern">Intern</option>
                   <option value="Project-based">Project-based</option>
                   <option value="Startup founder">Startup Founder</option>
-                  <option value="Full-time professional">Full-time Professional</option>
+                  <option value="Full-time professional">
+                    Full-time Professional
+                  </option>
                   <option value="Faculty / Mentor">Faculty / Mentor</option>
                 </select>
               </div>
 
-              {/* Resume URL */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-tetr-green" />
-                    Resume Link
-                  </span>
+                  Resume Link
                 </label>
                 <input
                   type="url"
                   value={editForm.resumeUrl}
-                  onChange={(e) => setEditForm({ ...editForm, resumeUrl: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, resumeUrl: e.target.value })
+                  }
                   className="input-field"
-                  placeholder="https://drive.google.com/your-resume or LinkedIn profile URL"
+                  placeholder="https://drive.google.com/your-resume"
                 />
-                <p className="text-xs text-tetr-gray mt-1">
-                  Paste a link to your resume (Google Drive, Dropbox, LinkedIn, etc.)
+                <p className="text-xs text-gray-400 mt-1">
+                  Paste a link to your resume (Google Drive, Dropbox, LinkedIn)
                 </p>
               </div>
 
-              {/* Phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Phone Number
@@ -997,7 +869,9 @@ export default function ProfilePage() {
                 <input
                   type="tel"
                   value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, phone: e.target.value })
+                  }
                   className="input-field"
                   placeholder="+91 9876543210"
                 />
@@ -1005,17 +879,17 @@ export default function ProfilePage() {
             </div>
 
             {/* Modal footer */}
-            <div className="sticky bottom-0 bg-white border-t border-tetr-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
               <button
                 onClick={() => setShowEditModal(false)}
-                className="btn-secondary text-sm"
+                className="px-5 py-1.5 border border-gray-300 text-gray-600 text-sm font-semibold rounded-full hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveProfile}
                 disabled={saving || !editForm.fullName.trim()}
-                className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-50"
+                className="px-5 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors flex items-center gap-1.5 disabled:opacity-50"
               >
                 {saveSuccess ? (
                   <>
@@ -1030,7 +904,7 @@ export default function ProfilePage() {
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    Save Changes
+                    Save
                   </>
                 )}
               </button>
