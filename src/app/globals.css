@@ -1,26 +1,237 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --tetr-green: #2d6a4f;
+  --tetr-green-light: #40916c;
+  --tetr-green-lighter: #74c69d;
+  --tetr-green-bg: #f0fdf4;
+  --tetr-dark: #1b4332;
+  --tetr-gray: #6b7280;
+  --tetr-gray-light: #f3f4f6;
+  --tetr-border: #e5e7eb;
+  --tetr-white: #ffffff;
+  --tetr-blue: #1d4ed8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-tetr-green: var(--tetr-green);
+  --color-tetr-green-light: var(--tetr-green-light);
+  --color-tetr-green-lighter: var(--tetr-green-lighter);
+  --color-tetr-green-bg: var(--tetr-green-bg);
+  --color-tetr-dark: var(--tetr-dark);
+  --color-tetr-gray: var(--tetr-gray);
+  --color-tetr-gray-light: var(--tetr-gray-light);
+  --color-tetr-border: var(--tetr-border);
+  --color-tetr-blue: var(--tetr-blue);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: #f3f4f6;
+  color: #1f2937;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Cards ── */
+.card {
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid var(--tetr-border);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  transition: box-shadow 0.2s;
+}
+
+.card-hover:hover {
+  box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  background: var(--tetr-green);
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 1.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: var(--tetr-green-light);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--tetr-green);
+  padding: 0.5rem 1.25rem;
+  border-radius: 1.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 1.5px solid var(--tetr-green);
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--tetr-green-bg);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--tetr-gray);
+  padding: 0.5rem 1rem;
+  border-radius: 1.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: none;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background: var(--tetr-gray-light);
+  color: var(--tetr-dark);
+}
+
+/* ── Inputs ── */
+.input-field {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--tetr-border);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.15s;
+  background: white;
+}
+
+.input-field:focus {
+  border-color: var(--tetr-green);
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.badge-green {
+  background: var(--tetr-green-bg);
+  color: var(--tetr-green);
+}
+
+.badge-gray {
+  background: var(--tetr-gray-light);
+  color: var(--tetr-gray);
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: overlayIn 0.2s ease-out;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 38rem;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Section titles (profile) ── */
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-divider {
+  height: 1px;
+  background: var(--tetr-border);
+  margin: 1rem 0;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Scrollbar ── */
+.modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+.modal-content::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+/* ── Upload drop zone ── */
+.upload-zone {
+  border: 2px dashed var(--tetr-border);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--tetr-green);
+  background: var(--tetr-green-bg);
 }
