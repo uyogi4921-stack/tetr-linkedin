@@ -45,6 +45,8 @@ export async function getSession() {
       excitedField: true,
       aboutLine: true,
       avatarUrl: true,
+      resumeUrl: true,
+      phone: true,
       isAdmin: true,
       onboardingComplete: true,
       experienceLevel: true,

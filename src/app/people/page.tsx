@@ -70,6 +70,46 @@ function PeopleContent() {
   const [field, setField] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [connectingTo, setConnectingTo] = useState<string | null>(null);
+  const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set());
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+
+  // Fetch connection statuses
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/connections")
+      .then((r) => r.json())
+      .then((d) => {
+        const accepted = new Set<string>();
+        const pending = new Set<string>();
+        (d.connections || []).forEach((c: any) => {
+          accepted.add(c.senderId === user.id ? c.receiverId : c.senderId);
+        });
+        (d.pendingSent || []).forEach((c: any) => {
+          pending.add(c.receiverId);
+        });
+        setConnectedIds(accepted);
+        setPendingIds(pending);
+      })
+      .catch(() => {});
+  }, [user]);
+
+  const handleConnect = async (profileId: string) => {
+    if (connectingTo) return;
+    setConnectingTo(profileId);
+    try {
+      const res = await fetch("/api/connections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: profileId }),
+      });
+      if (res.ok) {
+        setPendingIds((prev) => new Set([...prev, profileId]));
+      }
+    } finally {
+      setConnectingTo(null);
+    }
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -320,6 +360,27 @@ function PeopleContent() {
 
                       {/* Action buttons */}
                       <div className="mt-4 flex gap-2">
+                        {profile.id !== user.id && (
+                          connectedIds.has(profile.id) ? (
+                            <span className="flex-1 py-2 text-center text-xs font-semibold text-tetr-green bg-tetr-green-bg rounded-full flex items-center justify-center gap-1">
+                              <UserPlus className="w-3.5 h-3.5" />
+                              Connected
+                            </span>
+                          ) : pendingIds.has(profile.id) ? (
+                            <span className="flex-1 py-2 text-center text-xs font-semibold text-amber-600 bg-amber-50 rounded-full">
+                              Pending
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleConnect(profile.id)}
+                              disabled={connectingTo === profile.id}
+                              className="flex-1 py-2 text-center text-xs font-semibold text-white bg-tetr-green rounded-full hover:bg-tetr-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                            >
+                              <UserPlus className="w-3.5 h-3.5" />
+                              {connectingTo === profile.id ? "..." : "Connect"}
+                            </button>
+                          )
+                        )}
                         <Link
                           href={`/profile/${profile.id}`}
                           className="flex-1 py-2 text-center text-xs font-semibold text-tetr-green border border-tetr-green rounded-full hover:bg-tetr-green-bg transition-colors"

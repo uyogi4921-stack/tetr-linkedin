@@ -72,10 +72,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
         <div className="flex items-center gap-3">
           <Link href="/feed" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 bg-tetr-green rounded-lg flex items-center justify-center text-white font-bold text-sm">
-              T
-            </div>
-            <span className="hidden sm:block text-tetr-dark font-semibold text-lg">TETR</span>
+            <img src="/tetr-logo.svg" alt="TETR" className="h-9 w-auto" />
           </Link>
           <form onSubmit={handleSearch} className="hidden md:block relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tetr-gray w-4 h-4" />

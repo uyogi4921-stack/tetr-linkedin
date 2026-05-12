@@ -65,16 +65,16 @@ export default function FeedPage() {
           {/* Left sidebar */}
           <aside className="hidden lg:block lg:col-span-3">
             <div className="card p-4 sticky top-20">
-              <div className="text-center">
+              <Link href={`/profile/${user.id}`} className="block text-center group cursor-pointer">
                 <Avatar name={user.fullName} avatarUrl={user.avatarUrl} size="lg" />
-                <h3 className="font-semibold text-gray-900 mt-2">{user.fullName}</h3>
+                <h3 className="font-semibold text-gray-900 mt-2 group-hover:text-tetr-green transition-colors">{user.fullName}</h3>
                 <p className="text-xs text-tetr-gray">
                   {user.batch && `Batch ${user.batch}`} &middot; {user.role}
                 </p>
                 {user.aboutLine && (
                   <p className="text-xs text-tetr-gray mt-1">{user.aboutLine}</p>
                 )}
-              </div>
+              </Link>
               <div className="mt-4 pt-3 border-t border-tetr-border">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-tetr-gray">Profile strength</span>

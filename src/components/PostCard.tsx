@@ -6,6 +6,7 @@ import Avatar from "./Avatar";
 import { useAuth } from "@/lib/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import CommentSection from "./CommentSection";
+import Link from "next/link";
 
 interface PostCardProps {
   post: {
@@ -59,11 +60,13 @@ export default function PostCard({ post, onLikeToggle }: PostCardProps) {
           </div>
         )}
         <div className="flex items-start gap-3">
-          <Avatar name={post.author.fullName} avatarUrl={post.author.avatarUrl} />
+          <Link href={`/profile/${post.author.id}`}>
+            <Avatar name={post.author.fullName} avatarUrl={post.author.avatarUrl} />
+          </Link>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-semibold text-sm text-gray-900">{post.author.fullName}</span>
+                <Link href={`/profile/${post.author.id}`} className="font-semibold text-sm text-gray-900 hover:text-tetr-green hover:underline transition-colors">{post.author.fullName}</Link>
                 {post.author.batch && (
                   <span className="text-xs text-tetr-gray ml-1.5">&middot; {post.author.batch}</span>
                 )}

@@ -21,18 +21,24 @@ import {
   TrendingUp,
   Edit3,
   ChevronRight,
-  ExternalLink,
   Heart,
   Eye,
   Search,
   BarChart3,
   UserPlus,
+  UserCheck,
+  Clock,
   FileText,
+  ExternalLink,
+  X,
+  Save,
+  Upload,
+  Check,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const router = useRouter();
   const params = useParams();
   const profileId = params.id as string;
@@ -42,19 +48,48 @@ export default function ProfilePage() {
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
 
+  // Connection state
+  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
+  const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [connectionCount, setConnectionCount] = useState(0);
+  const [connectLoading, setConnectLoading] = useState(false);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    aboutLine: "",
+    expertise: "",
+    excitedField: "",
+    experienceLevel: "",
+    resumeUrl: "",
+    phone: "",
+    batch: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
       router.replace("/login");
       return;
     }
+    fetchProfile();
+  }, [user, loading, router, profileId]);
+
+  const fetchProfile = () => {
+    setLoadingProfile(true);
     fetch(`/api/users/${profileId}`)
       .then((r) => r.json())
       .then((d) => {
         setProfile(d.profile);
+        setConnectionStatus(d.connectionStatus);
+        setConnectionId(d.connectionId);
+        setConnectionCount(d.connectionCount || 0);
         setLoadingProfile(false);
       });
-  }, [user, loading, router, profileId]);
+  };
 
   useEffect(() => {
     if (activeTab === "posts" || activeTab === "activity") {
@@ -70,6 +105,99 @@ export default function ProfilePage() {
         });
     }
   }, [activeTab, profileId]);
+
+  const handleConnect = async () => {
+    if (connectLoading) return;
+    setConnectLoading(true);
+    try {
+      const res = await fetch("/api/connections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: profileId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setConnectionStatus("pending_sent");
+        setConnectionId(data.connection.id);
+      }
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
+  const handleAcceptConnection = async () => {
+    if (!connectionId || connectLoading) return;
+    setConnectLoading(true);
+    try {
+      const res = await fetch("/api/connections", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, action: "accept" }),
+      });
+      if (res.ok) {
+        setConnectionStatus("accepted");
+        setConnectionCount((c) => c + 1);
+      }
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
+  const handleWithdrawConnection = async () => {
+    if (!connectionId || connectLoading) return;
+    setConnectLoading(true);
+    try {
+      const res = await fetch("/api/connections", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, action: "withdraw" }),
+      });
+      if (res.ok) {
+        setConnectionStatus(null);
+        setConnectionId(null);
+      }
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditForm({
+      fullName: profile.fullName || "",
+      aboutLine: profile.aboutLine || "",
+      expertise: profile.expertise || "",
+      excitedField: profile.excitedField || "",
+      experienceLevel: profile.experienceLevel || "",
+      resumeUrl: profile.resumeUrl || "",
+      phone: profile.phone || "",
+      batch: profile.batch || "",
+    });
+    setSaveSuccess(false);
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/users/${profileId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) {
+        setSaveSuccess(true);
+        fetchProfile();
+        await refresh();
+        setTimeout(() => {
+          setShowEditModal(false);
+          setSaveSuccess(false);
+        }, 1000);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading || !user || loadingProfile) {
     return (
@@ -126,12 +254,75 @@ export default function ProfilePage() {
     general_management: "General Management",
   };
 
+  const renderConnectButton = () => {
+    if (isOwnProfile) {
+      return (
+        <button
+          onClick={openEditModal}
+          className="btn-secondary flex items-center gap-1.5 text-sm"
+        >
+          <Edit3 className="w-4 h-4" />
+          Edit Profile
+        </button>
+      );
+    }
+
+    if (connectionStatus === "accepted") {
+      return (
+        <button
+          disabled
+          className="flex items-center gap-1.5 text-sm px-4 py-2 bg-tetr-green-bg text-tetr-green rounded-full font-medium cursor-default"
+        >
+          <UserCheck className="w-4 h-4" />
+          Connected
+        </button>
+      );
+    }
+
+    if (connectionStatus === "pending_sent") {
+      return (
+        <button
+          onClick={handleWithdrawConnection}
+          disabled={connectLoading}
+          className="btn-secondary flex items-center gap-1.5 text-sm"
+        >
+          <Clock className="w-4 h-4" />
+          {connectLoading ? "..." : "Pending"}
+        </button>
+      );
+    }
+
+    if (connectionStatus === "pending_received") {
+      return (
+        <button
+          onClick={handleAcceptConnection}
+          disabled={connectLoading}
+          className="btn-primary flex items-center gap-1.5 text-sm"
+        >
+          <UserCheck className="w-4 h-4" />
+          {connectLoading ? "..." : "Accept"}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={handleConnect}
+        disabled={connectLoading}
+        className="btn-secondary flex items-center gap-1.5 text-sm"
+      >
+        <UserPlus className="w-4 h-4" />
+        {connectLoading ? "..." : "Connect"}
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-tetr-gray-light">
       <Header />
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
-        {/* ── Profile Card ── */}
+        {/* Profile Card */}
         <div className="card overflow-hidden">
           {/* Cover photo */}
           <div className="h-48 sm:h-56 bg-gradient-to-br from-tetr-dark via-tetr-green to-tetr-green-light relative">
@@ -140,11 +331,6 @@ export default function ProfilePage() {
               <div className="absolute bottom-4 right-16 w-48 h-48 rounded-full border-2 border-white/20" />
               <div className="absolute top-16 right-32 w-16 h-16 rounded-full border-2 border-white/20" />
             </div>
-            {isOwnProfile && (
-              <button className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors">
-                <Edit3 className="w-4 h-4" />
-              </button>
-            )}
           </div>
 
           {/* Profile info */}
@@ -170,26 +356,16 @@ export default function ProfilePage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {!isOwnProfile ? (
-                      <>
-                        <Link
-                          href={`/messages?with=${profile.id}`}
-                          className="btn-primary flex items-center gap-1.5 text-sm"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          Message
-                        </Link>
-                        <button className="btn-secondary flex items-center gap-1.5 text-sm">
-                          <UserPlus className="w-4 h-4" />
-                          Connect
-                        </button>
-                      </>
-                    ) : (
-                      <button className="btn-secondary flex items-center gap-1.5 text-sm">
-                        <Edit3 className="w-4 h-4" />
-                        Edit Profile
-                      </button>
+                    {!isOwnProfile && (
+                      <Link
+                        href={`/messages?with=${profile.id}`}
+                        className="btn-primary flex items-center gap-1.5 text-sm"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        Message
+                      </Link>
                     )}
+                    {renderConnectButton()}
                   </div>
                 </div>
 
@@ -214,6 +390,12 @@ export default function ProfilePage() {
                 {/* Stats row */}
                 <div className="flex items-center gap-4 mt-3">
                   <span className="text-sm">
+                    <strong className="text-gray-900">{connectionCount}</strong>{" "}
+                    <span className="text-tetr-gray">
+                      connection{connectionCount !== 1 ? "s" : ""}
+                    </span>
+                  </span>
+                  <span className="text-sm">
                     <strong className="text-gray-900">{clubCount}</strong>{" "}
                     <span className="text-tetr-gray">
                       club{clubCount !== 1 ? "s" : ""}
@@ -235,7 +417,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* ── Left column ── */}
+          {/* Left column */}
           <div className="lg:col-span-4 space-y-4">
             {/* Analytics card (own profile) */}
             {isOwnProfile && (
@@ -251,9 +433,9 @@ export default function ProfilePage() {
                     <p className="text-[11px] text-tetr-gray">Profile views</p>
                   </div>
                   <div className="text-center p-3 bg-tetr-gray-light rounded-xl">
-                    <Search className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-                    <p className="text-xl font-bold text-gray-900">12</p>
-                    <p className="text-[11px] text-tetr-gray">Appearances</p>
+                    <Users className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+                    <p className="text-xl font-bold text-gray-900">{connectionCount}</p>
+                    <p className="text-[11px] text-tetr-gray">Connections</p>
                   </div>
                   <div className="text-center p-3 bg-tetr-gray-light rounded-xl">
                     <TrendingUp className="w-5 h-5 text-tetr-green mx-auto mb-1" />
@@ -323,6 +505,50 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Resume card */}
+            {(profile.resumeUrl || isOwnProfile) && (
+              <div className="card p-5 animate-slide-up">
+                <h3 className="section-title text-base mb-4">
+                  <FileText className="w-5 h-5 text-tetr-green" />
+                  Resume
+                </h3>
+                {profile.resumeUrl ? (
+                  <a
+                    href={profile.resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 bg-tetr-gray-light rounded-xl hover:bg-gray-100 transition-colors group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shrink-0">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 group-hover:text-tetr-green transition-colors">
+                        {profile.fullName}&apos;s Resume
+                      </p>
+                      <p className="text-xs text-tetr-gray truncate">
+                        {profile.resumeUrl}
+                      </p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-tetr-gray group-hover:text-tetr-green transition-colors shrink-0" />
+                  </a>
+                ) : isOwnProfile ? (
+                  <div className="text-center py-4">
+                    <Upload className="w-8 h-8 text-tetr-gray mx-auto mb-2 opacity-40" />
+                    <p className="text-sm text-tetr-gray mb-3">
+                      Add your resume link to showcase your experience
+                    </p>
+                    <button
+                      onClick={openEditModal}
+                      className="btn-primary text-sm"
+                    >
+                      Add Resume Link
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             {/* Clubs card */}
             {clubCount > 0 && (
               <div className="card p-5 animate-slide-up">
@@ -356,7 +582,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* ── Right column (main content) ── */}
+          {/* Right column (main content) */}
           <div className="lg:col-span-8 space-y-4">
             {/* Tabs */}
             <div className="card overflow-hidden">
@@ -389,9 +615,7 @@ export default function ProfilePage() {
                       Education
                     </h4>
                     <div className="flex items-start gap-4 p-4 bg-tetr-gray-light rounded-xl">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-tetr-green to-tetr-green-light flex items-center justify-center text-white font-bold shrink-0">
-                        T
-                      </div>
+                      <img src="/tetr-logo.svg" alt="TETR" className="w-12 h-12 rounded-xl object-contain bg-white p-1 border border-gray-200 shrink-0" />
                       <div>
                         <p className="font-semibold text-gray-900">
                           TETR College of Business
@@ -443,6 +667,35 @@ export default function ProfilePage() {
                           </span>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Resume in About tab */}
+                  {profile.resumeUrl && (
+                    <div>
+                      <h4 className="section-title text-sm mb-3">
+                        <FileText className="w-4 h-4 text-tetr-green" />
+                        Resume
+                      </h4>
+                      <a
+                        href={profile.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 bg-tetr-gray-light rounded-xl hover:bg-gray-100 transition-colors group"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 group-hover:text-tetr-green transition-colors">
+                            View Resume
+                          </p>
+                          <p className="text-xs text-tetr-gray truncate">
+                            {profile.resumeUrl}
+                          </p>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-tetr-gray group-hover:text-tetr-green transition-colors" />
+                      </a>
                     </div>
                   )}
 
@@ -592,6 +845,199 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowEditModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in">
+            {/* Modal header */}
+            <div className="sticky top-0 bg-white border-b border-tetr-border px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+              <h2 className="text-lg font-bold text-gray-900">Edit Profile</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="p-6 space-y-5">
+              {/* Full Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                  className="input-field"
+                  placeholder="Your full name"
+                />
+              </div>
+
+              {/* About / Headline */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Headline
+                </label>
+                <input
+                  type="text"
+                  value={editForm.aboutLine}
+                  onChange={(e) => setEditForm({ ...editForm, aboutLine: e.target.value })}
+                  className="input-field"
+                  placeholder="e.g. Finance Major | Aspiring Consultant"
+                />
+              </div>
+
+              {/* Batch */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Batch
+                </label>
+                <select
+                  value={editForm.batch}
+                  onChange={(e) => setEditForm({ ...editForm, batch: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Select batch</option>
+                  <option value="2028">2028</option>
+                  <option value="2029">2029</option>
+                  <option value="2030">2030</option>
+                </select>
+              </div>
+
+              {/* Skills & Expertise */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Skills & Expertise
+                </label>
+                <textarea
+                  value={editForm.expertise}
+                  onChange={(e) => setEditForm({ ...editForm, expertise: e.target.value })}
+                  className="input-field min-h-[80px] resize-none"
+                  placeholder="e.g. Financial modeling, Python, Data Analysis"
+                  rows={3}
+                />
+              </div>
+
+              {/* Field of Interest */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Field of Interest
+                </label>
+                <select
+                  value={editForm.excitedField}
+                  onChange={(e) => setEditForm({ ...editForm, excitedField: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Select field</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Consulting">Consulting</option>
+                  <option value="Technology">Technology</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Product Management">Product Management</option>
+                  <option value="Entrepreneurship">Entrepreneurship</option>
+                  <option value="Sustainability">Sustainability</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Data Science">Data Science</option>
+                  <option value="Education">Education</option>
+                </select>
+              </div>
+
+              {/* Experience Level */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Experience Level
+                </label>
+                <select
+                  value={editForm.experienceLevel}
+                  onChange={(e) => setEditForm({ ...editForm, experienceLevel: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Select level</option>
+                  <option value="Intern">Intern</option>
+                  <option value="Project-based">Project-based</option>
+                  <option value="Startup founder">Startup Founder</option>
+                  <option value="Full-time professional">Full-time Professional</option>
+                  <option value="Faculty / Mentor">Faculty / Mentor</option>
+                </select>
+              </div>
+
+              {/* Resume URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-tetr-green" />
+                    Resume Link
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  value={editForm.resumeUrl}
+                  onChange={(e) => setEditForm({ ...editForm, resumeUrl: e.target.value })}
+                  className="input-field"
+                  placeholder="https://drive.google.com/your-resume or LinkedIn profile URL"
+                />
+                <p className="text-xs text-tetr-gray mt-1">
+                  Paste a link to your resume (Google Drive, Dropbox, LinkedIn, etc.)
+                </p>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="input-field"
+                  placeholder="+91 9876543210"
+                />
+              </div>
+            </div>
+
+            {/* Modal footer */}
+            <div className="sticky bottom-0 bg-white border-t border-tetr-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                disabled={saving || !editForm.fullName.trim()}
+                className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-50"
+              >
+                {saveSuccess ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Saved!
+                  </>
+                ) : saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

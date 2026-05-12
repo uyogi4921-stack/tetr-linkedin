@@ -21,6 +21,7 @@ model User {
   excitedField       String?
   aboutLine          String?
   avatarUrl          String?
+  resumeUrl          String?
   isVerified         Boolean  @default(false)
   isAdmin            Boolean  @default(false)
   onboardingComplete Boolean  @default(false)
@@ -36,6 +37,8 @@ model User {
   notifications      Notification[]
   postLikes          PostLike[]
   resourceLikes      ResourceLike[]
+  sentConnections    Connection[]    @relation("SentConnections")
+  receivedConnections Connection[]   @relation("ReceivedConnections")
 }
 
 model Batch {
@@ -213,4 +216,18 @@ model Rule {
   text      String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+model Connection {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sender   User @relation("SentConnections", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedConnections", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
 }
