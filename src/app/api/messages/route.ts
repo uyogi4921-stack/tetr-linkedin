@@ -61,5 +61,16 @@ export async function POST(request: NextRequest) {
     data: { text, senderId: user.id, receiverId },
   });
 
+  // Create notification for the receiver
+  await prisma.notification.create({
+    data: {
+      userId: receiverId,
+      type: "message",
+      title: "New Message",
+      message: `${user.fullName} sent you a message.`,
+      link: `/messages?with=${user.id}`,
+    },
+  });
+
   return Response.json({ message });
 }

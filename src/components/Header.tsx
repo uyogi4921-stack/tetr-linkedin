@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useRouter } from "next/navigation";
 import {
@@ -26,9 +26,10 @@ export default function Header() {
   const [showMobile, setShowMobile] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const fetchNotificationCount = useCallback(() => {
     if (!user) return;
     fetch("/api/notifications")
       .then((r) => r.json())
@@ -38,6 +39,27 @@ export default function Header() {
       })
       .catch(() => {});
   }, [user]);
+
+  const fetchUnreadMessages = useCallback(() => {
+    if (!user) return;
+    fetch("/api/messages/unread-count")
+      .then((r) => r.json())
+      .then((d) => {
+        setUnreadMessages(d.count || 0);
+      })
+      .catch(() => {});
+  }, [user]);
+
+  // Initial fetch + poll every 30 seconds
+  useEffect(() => {
+    fetchNotificationCount();
+    fetchUnreadMessages();
+    const interval = setInterval(() => {
+      fetchNotificationCount();
+      fetchUnreadMessages();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotificationCount, fetchUnreadMessages]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -99,9 +121,14 @@ export default function Header() {
           ))}
           <Link
             href="/messages"
-            className="flex flex-col items-center px-3 py-1 text-tetr-gray hover:text-tetr-green transition-colors"
+            className="flex flex-col items-center px-3 py-1 text-tetr-gray hover:text-tetr-green transition-colors relative"
           >
             <MessageSquare className="w-5 h-5" />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-0.5 right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                {unreadMessages > 9 ? "9+" : unreadMessages}
+              </span>
+            )}
             <span className="text-[11px] mt-0.5">Messages</span>
           </Link>
           <Link
@@ -196,6 +223,9 @@ export default function Header() {
               className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-tetr-gray-light rounded-md"
             >
               <MessageSquare className="w-5 h-5" /> Messages
+              {unreadMessages > 0 && (
+                <span className="bg-red-500 text-white text-xs rounded-full px-1.5">{unreadMessages}</span>
+              )}
             </Link>
             <Link
               href="/notifications"

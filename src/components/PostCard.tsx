@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Check, Link as LinkIcon, Copy } from "lucide-react";
 import Avatar from "./Avatar";
 import { useAuth } from "@/lib/useAuth";
 import { formatDistanceToNow } from "date-fns";
@@ -38,6 +38,8 @@ export default function PostCard({ post, onLikeToggle }: PostCardProps) {
     post.likes.some((l) => l.userId === user?.id)
   );
   const [liking, setLiking] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleLike = async () => {
     if (liking) return;
@@ -65,6 +67,43 @@ export default function PostCard({ post, onLikeToggle }: PostCardProps) {
       setLikeCount((c) => (wasLiked ? c + 1 : c - 1));
     }
     setLiking(false);
+  };
+
+  const handleShare = async () => {
+    const postUrl = `${window.location.origin}/feed#post-${post.id}`;
+
+    // Try native share API first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: post.title || `Post by ${post.author.fullName}`,
+          text: post.body.slice(0, 100) + (post.body.length > 100 ? "..." : ""),
+          url: postUrl,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed, fall through to copy
+      }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(postUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Older browser fallback
+      const textArea = document.createElement("textarea");
+      textArea.value = postUrl;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const typeColors: Record<string, string> = {
@@ -176,9 +215,25 @@ export default function PostCard({ post, onLikeToggle }: PostCardProps) {
             <MessageCircle className="w-4 h-4" />
             Comment
           </button>
-          <button className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm text-tetr-gray hover:bg-tetr-gray-light transition-colors cursor-pointer select-none">
-            <Share2 className="w-4 h-4" />
-            Share
+          <button
+            onClick={handleShare}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm transition-colors cursor-pointer select-none ${
+              copied
+                ? "text-tetr-green font-medium"
+                : "text-tetr-gray hover:bg-tetr-gray-light"
+            }`}
+          >
+            {copied ? (
+              <>
+                <Check className="w-4 h-4" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4" />
+                Share
+              </>
+            )}
           </button>
         </div>
       </div>
