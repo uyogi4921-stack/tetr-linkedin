@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSessionId, getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function GET() {
-  const user = await getSession();
+  const user = await getSessionId();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const clubs = await prisma.club.findMany({

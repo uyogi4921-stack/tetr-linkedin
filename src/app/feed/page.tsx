@@ -38,19 +38,28 @@ export default function FeedPage() {
     setLoadingPosts(false);
   }, []);
 
+  // Fire ALL data fetches immediately — don't wait for auth
+  // The API routes check auth server-side anyway
+  useEffect(() => {
+    fetchPosts();
+    fetch("/api/events?tab=upcoming").then(r => r.json()).then(d => setEvents((d.events || []).slice(0, 3))).catch(() => {});
+    fetch("/api/clubs").then(r => r.json()).then(d => setClubs((d.clubs || []).slice(0, 5))).catch(() => {});
+  }, [fetchPosts]);
+
+  // Redirect logic (only after auth resolves)
   useEffect(() => {
     if (loading) return;
     if (!user) { router.replace("/login"); return; }
     if (!user.onboardingComplete) { router.replace("/onboarding"); return; }
-    fetchPosts();
-    fetch("/api/events?tab=upcoming").then(r => r.json()).then(d => setEvents((d.events || []).slice(0, 3)));
-    fetch("/api/clubs").then(r => r.json()).then(d => setClubs((d.clubs || []).slice(0, 5)));
-  }, [user, loading, router, fetchPosts]);
+  }, [user, loading, router]);
 
   if (loading || !user) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-tetr-green border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-tetr-gray-light">
+        <Header />
+        <div className="flex-1 flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-tetr-green border-t-transparent rounded-full animate-spin" />
+        </div>
       </div>
     );
   }

@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, getSessionId } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const user = await getSession();
+  const user = await getSessionId();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const otherId = new URL(request.url).searchParams.get("with");

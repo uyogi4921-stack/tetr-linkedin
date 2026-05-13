@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, getSessionId } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function GET() {
-  const user = await getSession();
+  const user = await getSessionId();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const notifications = await prisma.notification.findMany({
@@ -16,7 +16,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const user = await getSession();
+  const user = await getSessionId();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await request.json();

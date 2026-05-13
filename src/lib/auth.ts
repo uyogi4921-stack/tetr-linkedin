@@ -25,6 +25,23 @@ export async function createSession(userId: string) {
   return token;
 }
 
+/**
+ * Fast auth check — only parses cookie, no DB query.
+ * Returns { id } or null. Use this in API routes that only need userId.
+ */
+export async function getSessionId(): Promise<{ id: string } | null> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get(SESSION_COOKIE);
+  if (!session?.value) return null;
+  const [userId] = session.value.split(":");
+  if (!userId) return null;
+  return { id: userId };
+}
+
+/**
+ * Full auth check — parses cookie + queries DB for user profile.
+ * Use in /api/auth/me or when you need full user data.
+ */
 export async function getSession() {
   const cookieStore = await cookies();
   const session = cookieStore.get(SESSION_COOKIE);

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSessionId } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 const BLOCKED_PATTERNS = [
@@ -9,7 +9,7 @@ const BLOCKED_PATTERNS = [
 ];
 
 export async function POST(request: NextRequest) {
-  const user = await getSession();
+  const user = await getSessionId();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { text } = await request.json();
