@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useRouter, useParams } from "next/navigation";
 import Header from "@/components/Header";
@@ -34,8 +34,35 @@ import {
   Clock,
   Camera,
   Image,
+  Trash2,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+
+// Compress image to max dimensions and return base64
+function compressImage(file: File, maxW: number, maxH: number, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW) { h = (h * maxW) / w; w = maxW; }
+        if (h > maxH) { w = (w * maxH) / h; h = maxH; }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ProfilePage() {
   const { user, loading, refresh } = useAuth();
@@ -72,6 +99,16 @@ export default function ProfilePage() {
   });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // File upload refs
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputModalRef = useRef<HTMLInputElement>(null);
+  const coverInputModalRef = useRef<HTMLInputElement>(null);
+
+  // Preview state for uploads in modal
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
   // Create post modal state
   const [showCreatePost, setShowCreatePost] = useState(false);
@@ -185,8 +222,69 @@ export default function ProfilePage() {
       avatarUrl: profile.avatarUrl || "",
       coverImageUrl: profile.coverImageUrl || "",
     });
+    setAvatarPreview(null);
+    setCoverPreview(null);
     setSaveSuccess(false);
     setShowEditModal(true);
+  };
+
+  // Handle avatar file pick (from profile page directly or modal)
+  const handleAvatarFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const compressed = await compressImage(file, 400, 400, 0.85);
+    setAvatarPreview(compressed);
+    setEditForm((prev) => ({ ...prev, avatarUrl: compressed }));
+  };
+
+  // Handle cover file pick
+  const handleCoverFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const compressed = await compressImage(file, 1600, 400, 0.8);
+    setCoverPreview(compressed);
+    setEditForm((prev) => ({ ...prev, coverImageUrl: compressed }));
+  };
+
+  // Quick upload from profile page (camera buttons) — opens file picker, then saves directly
+  const handleQuickAvatarUpload = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleQuickCoverUpload = () => {
+    coverInputRef.current?.click();
+  };
+
+  const onQuickAvatarSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const compressed = await compressImage(file, 400, 400, 0.85);
+    // Save directly to API
+    const res = await fetch(`/api/users/${profileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatarUrl: compressed }),
+    });
+    if (res.ok) {
+      fetchProfile();
+      await refresh();
+    }
+    e.target.value = "";
+  };
+
+  const onQuickCoverSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const compressed = await compressImage(file, 1600, 400, 0.8);
+    // Save directly to API
+    const res = await fetch(`/api/users/${profileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coverImageUrl: compressed }),
+    });
+    if (res.ok) {
+      fetchProfile();
+      await refresh();
+    }
+    e.target.value = "";
   };
 
   const handleSaveProfile = async () => {
@@ -215,23 +313,19 @@ export default function ProfilePage() {
   // Helper: convert Google Drive share links to embeddable preview URL
   const getResumeEmbedUrl = (url: string): string | null => {
     if (!url) return null;
-    // Google Drive file: https://drive.google.com/file/d/FILE_ID/view
     const driveFileMatch = url.match(
       /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/
     );
     if (driveFileMatch) {
       return `https://drive.google.com/file/d/${driveFileMatch[1]}/preview`;
     }
-    // Google Drive open: https://drive.google.com/open?id=FILE_ID
     const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
     if (driveOpenMatch) {
       return `https://drive.google.com/file/d/${driveOpenMatch[1]}/preview`;
     }
-    // Direct PDF link
     if (url.endsWith(".pdf")) {
       return url;
     }
-    // Dropbox: convert to raw
     if (url.includes("dropbox.com")) {
       return url.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "");
     }
@@ -303,24 +397,35 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-tetr-gray-light">
       <Header />
 
+      {/* Hidden file inputs for quick upload from camera buttons */}
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onQuickAvatarSelected}
+      />
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onQuickCoverSelected}
+      />
+
       <div className="max-w-[900px] mx-auto px-4 py-6 space-y-4">
         {/* ═══════════════════ PROFILE CARD (LinkedIn-style) ═══════════════════ */}
         <div className="card overflow-hidden">
           {/* Cover photo */}
-          <div
-            className="h-[200px] relative"
-            style={
-              profile.coverImageUrl
-                ? {
-                    backgroundImage: `url(${profile.coverImageUrl})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }
-                : undefined
-            }
-          >
-            {/* Fallback gradient when no cover image */}
-            {!profile.coverImageUrl && (
+          <div className="h-[200px] relative">
+            {/* Actual cover image or gradient fallback */}
+            {profile.coverImageUrl ? (
+              <img
+                src={profile.coverImageUrl}
+                alt="Cover"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-tetr-dark via-tetr-green to-tetr-green-light">
                 <div className="absolute inset-0 opacity-[0.07]">
                   <div className="absolute top-6 left-10 w-28 h-28 rounded-full border-2 border-white" />
@@ -329,13 +434,14 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+            {/* Camera button - z-20 to be above everything */}
             {isOwnProfile && (
               <button
-                onClick={openEditModal}
-                className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors"
-                title="Edit cover photo"
+                onClick={handleQuickCoverUpload}
+                className="absolute top-4 right-4 z-20 p-2 bg-white/80 backdrop-blur-sm rounded-lg text-gray-700 hover:bg-white transition-colors shadow-sm cursor-pointer"
+                title="Change cover photo"
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-5 h-5" />
               </button>
             )}
           </div>
@@ -354,9 +460,9 @@ export default function ProfilePage() {
                 </div>
                 {isOwnProfile && (
                   <button
-                    onClick={openEditModal}
-                    className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
-                    title="Change photo"
+                    onClick={handleQuickAvatarUpload}
+                    className="absolute bottom-0 right-0 z-20 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                    title="Change profile photo"
                   >
                     <Camera className="w-3.5 h-3.5 text-gray-600" />
                   </button>
@@ -395,7 +501,7 @@ export default function ProfilePage() {
               <span>TETR College of Business</span>
             </div>
 
-            {/* Connections count - clickable like LinkedIn */}
+            {/* Connections count */}
             <div className="mt-2">
               <span className="text-sm font-semibold text-tetr-green hover:underline cursor-pointer">
                 {connectionCount} connection{connectionCount !== 1 ? "s" : ""}
@@ -421,7 +527,6 @@ export default function ProfilePage() {
                 </>
               ) : (
                 <>
-                  {/* Connect / Pending / Connected button */}
                   {connectionStatus === "accepted" ? (
                     <span className="px-5 py-1.5 bg-tetr-green-bg text-tetr-green text-sm font-semibold rounded-full flex items-center gap-1.5 cursor-default">
                       <UserCheck className="w-4 h-4" />
@@ -456,7 +561,6 @@ export default function ProfilePage() {
                     </button>
                   )}
 
-                  {/* Message button */}
                   <Link
                     href={`/messages?with=${profile.id}`}
                     className="px-5 py-1.5 border border-tetr-green text-tetr-green text-sm font-semibold rounded-full hover:bg-tetr-green-bg transition-colors flex items-center gap-1.5"
@@ -560,7 +664,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Details Tab (previously About) */}
+          {/* Details Tab */}
           {activeTab === "about" && (
             <div className="space-y-5 animate-fade-in">
               {/* Education */}
@@ -636,7 +740,6 @@ export default function ProfilePage() {
                   <h3 className="text-base font-bold text-gray-900 mb-2">
                     Resume
                   </h3>
-                  {/* Embed preview if possible */}
                   {resumeEmbedUrl && (
                     <div className="mb-3 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
                       <iframe
@@ -731,9 +834,8 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* ═══════════════════ SIDEBAR SECTIONS (on wider screens they stack below) ═══════════════════ */}
+        {/* ═══════════════════ SIDEBAR SECTIONS ═══════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Resume card (own profile, if no resume yet) */}
           {isOwnProfile && !profile.resumeUrl && (
             <div className="card p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-3">Resume</h2>
@@ -752,7 +854,6 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Clubs card */}
           {clubCount > 0 && (
             <div className="card p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-3">
@@ -806,73 +907,120 @@ export default function ProfilePage() {
 
             {/* Modal body */}
             <div className="p-6 space-y-5">
-              {/* Profile Picture URL */}
+              {/* Profile Photo Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <Camera className="w-4 h-4 text-gray-400" />
-                    Profile Photo URL
-                  </span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Profile Photo
                 </label>
-                <input
-                  type="url"
-                  value={editForm.avatarUrl}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, avatarUrl: e.target.value })
-                  }
-                  className="input-field"
-                  placeholder="https://example.com/your-photo.jpg"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Paste a direct link to your profile photo (JPG, PNG)
-                </p>
-                {editForm.avatarUrl && (
-                  <div className="mt-2 flex items-center gap-3">
-                    <img
-                      src={editForm.avatarUrl}
-                      alt="Preview"
-                      className="w-12 h-12 rounded-full object-cover border border-gray-200"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                    <span className="text-xs text-gray-500">Preview</span>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    {avatarPreview || editForm.avatarUrl ? (
+                      <img
+                        src={avatarPreview || editForm.avatarUrl}
+                        alt="Avatar"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-2xl font-bold border-2 border-gray-200">
+                        {profile.fullName?.charAt(0)?.toUpperCase()}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => avatarInputModalRef.current?.click()}
+                      className="px-4 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors flex items-center gap-1.5"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Upload Photo
+                    </button>
+                    {(avatarPreview || editForm.avatarUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarPreview(null);
+                          setEditForm((prev) => ({ ...prev, avatarUrl: "" }));
+                        }}
+                        className="px-4 py-1.5 border border-red-200 text-red-500 text-sm font-medium rounded-full hover:bg-red-50 transition-colors flex items-center gap-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={avatarInputModalRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) await handleAvatarFile(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* Cover Image URL */}
+              {/* Cover Image Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <Image className="w-4 h-4 text-gray-400" />
-                    Cover Image URL
-                  </span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cover Image
                 </label>
-                <input
-                  type="url"
-                  value={editForm.coverImageUrl}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, coverImageUrl: e.target.value })
-                  }
-                  className="input-field"
-                  placeholder="https://example.com/cover-image.jpg"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  A banner image for your profile (recommended: 1584x396px)
-                </p>
-                {editForm.coverImageUrl && (
-                  <div className="mt-2">
-                    <img
-                      src={editForm.coverImageUrl}
-                      alt="Cover preview"
-                      className="w-full h-20 rounded-lg object-cover border border-gray-200"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
+                <div
+                  className="relative h-28 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 hover:border-tetr-green transition-colors cursor-pointer group"
+                  onClick={() => coverInputModalRef.current?.click()}
+                >
+                  {coverPreview || editForm.coverImageUrl ? (
+                    <>
+                      <img
+                        src={coverPreview || editForm.coverImageUrl}
+                        alt="Cover"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-medium flex items-center gap-1.5">
+                          <Camera className="w-4 h-4" />
+                          Change Cover
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-tetr-dark via-tetr-green to-tetr-green-light opacity-30" />
+                  )}
+                  {!coverPreview && !editForm.coverImageUrl && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <Image className="w-8 h-8 text-gray-400 mb-1" />
+                      <span className="text-sm text-gray-500">Click to upload cover image</span>
+                    </div>
+                  )}
+                </div>
+                {(coverPreview || editForm.coverImageUrl) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCoverPreview(null);
+                      setEditForm((prev) => ({ ...prev, coverImageUrl: "" }));
+                    }}
+                    className="mt-2 px-3 py-1 border border-red-200 text-red-500 text-xs font-medium rounded-full hover:bg-red-50 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Remove cover
+                  </button>
                 )}
+                <input
+                  ref={coverInputModalRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) await handleCoverFile(file);
+                    e.target.value = "";
+                  }}
+                />
               </div>
 
               <hr className="border-gray-100" />
@@ -1004,7 +1152,7 @@ export default function ProfilePage() {
                   placeholder="https://drive.google.com/your-resume"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Paste a link to your resume (Google Drive, Dropbox, or direct PDF link)
+                  Paste a link to your resume (Google Drive, Dropbox, or direct PDF)
                 </p>
               </div>
 
