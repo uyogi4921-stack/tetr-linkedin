@@ -20,6 +20,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       excitedField: true,
       aboutLine: true,
       avatarUrl: true,
+      coverImageUrl: true,
       resumeUrl: true,
       experienceLevel: true,
       isVerified: true,
@@ -88,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json();
 
   // Whitelist editable fields
-  const allowedFields = ["fullName", "aboutLine", "expertise", "excitedField", "experienceLevel", "resumeUrl", "phone", "batch"];
+  const allowedFields = ["fullName", "aboutLine", "expertise", "excitedField", "experienceLevel", "resumeUrl", "phone", "batch", "avatarUrl", "coverImageUrl"];
   const data: Record<string, string | null> = {};
 
   for (const field of allowedFields) {
@@ -115,6 +116,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       excitedField: true,
       aboutLine: true,
       avatarUrl: true,
+      coverImageUrl: true,
       resumeUrl: true,
       experienceLevel: true,
       isAdmin: true,

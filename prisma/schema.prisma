@@ -21,6 +21,7 @@ model User {
   excitedField       String?
   aboutLine          String?
   avatarUrl          String?
+  coverImageUrl      String?
   resumeUrl          String?
   isVerified         Boolean  @default(false)
   isAdmin            Boolean  @default(false)

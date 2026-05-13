@@ -45,6 +45,7 @@ export async function getSession() {
       excitedField: true,
       aboutLine: true,
       avatarUrl: true,
+      coverImageUrl: true,
       resumeUrl: true,
       phone: true,
       isAdmin: true,

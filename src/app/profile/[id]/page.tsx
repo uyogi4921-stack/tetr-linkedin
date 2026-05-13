@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import Header from "@/components/Header";
 import Avatar from "@/components/Avatar";
 import PostCard from "@/components/PostCard";
+import CreatePost from "@/components/CreatePost";
 import Link from "next/link";
 import {
   MessageSquare,
@@ -32,6 +33,7 @@ import {
   UserCheck,
   Clock,
   Camera,
+  Image,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -65,9 +67,14 @@ export default function ProfilePage() {
     resumeUrl: "",
     phone: "",
     batch: "",
+    avatarUrl: "",
+    coverImageUrl: "",
   });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Create post modal state
+  const [showCreatePost, setShowCreatePost] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -91,18 +98,22 @@ export default function ProfilePage() {
       });
   };
 
+  const fetchPosts = () => {
+    setLoadingPosts(true);
+    fetch("/api/posts")
+      .then((r) => r.json())
+      .then((d) => {
+        const userPosts = (d.posts || []).filter(
+          (p: any) => p.author.id === profileId
+        );
+        setAllPosts(userPosts);
+        setLoadingPosts(false);
+      });
+  };
+
   useEffect(() => {
     if (activeTab === "posts" || activeTab === "activity") {
-      setLoadingPosts(true);
-      fetch("/api/posts")
-        .then((r) => r.json())
-        .then((d) => {
-          const userPosts = (d.posts || []).filter(
-            (p: any) => p.author.id === profileId
-          );
-          setAllPosts(userPosts);
-          setLoadingPosts(false);
-        });
+      fetchPosts();
     }
   }, [activeTab, profileId]);
 
@@ -171,6 +182,8 @@ export default function ProfilePage() {
       resumeUrl: profile.resumeUrl || "",
       phone: profile.phone || "",
       batch: profile.batch || "",
+      avatarUrl: profile.avatarUrl || "",
+      coverImageUrl: profile.coverImageUrl || "",
     });
     setSaveSuccess(false);
     setShowEditModal(true);
@@ -197,6 +210,32 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Helper: convert Google Drive share links to embeddable preview URL
+  const getResumeEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+    // Google Drive file: https://drive.google.com/file/d/FILE_ID/view
+    const driveFileMatch = url.match(
+      /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/
+    );
+    if (driveFileMatch) {
+      return `https://drive.google.com/file/d/${driveFileMatch[1]}/preview`;
+    }
+    // Google Drive open: https://drive.google.com/open?id=FILE_ID
+    const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+    if (driveOpenMatch) {
+      return `https://drive.google.com/file/d/${driveOpenMatch[1]}/preview`;
+    }
+    // Direct PDF link
+    if (url.endsWith(".pdf")) {
+      return url;
+    }
+    // Dropbox: convert to raw
+    if (url.includes("dropbox.com")) {
+      return url.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "");
+    }
+    return null;
   };
 
   if (loading || !user || loadingProfile) {
@@ -256,6 +295,10 @@ export default function ProfilePage() {
     general_management: "General Management",
   };
 
+  const resumeEmbedUrl = profile.resumeUrl
+    ? getResumeEmbedUrl(profile.resumeUrl)
+    : null;
+
   return (
     <div className="min-h-screen bg-tetr-gray-light">
       <Header />
@@ -263,15 +306,35 @@ export default function ProfilePage() {
       <div className="max-w-[900px] mx-auto px-4 py-6 space-y-4">
         {/* ═══════════════════ PROFILE CARD (LinkedIn-style) ═══════════════════ */}
         <div className="card overflow-hidden">
-          {/* Cover photo - just the gradient, no text on it */}
-          <div className="h-[200px] bg-gradient-to-br from-tetr-dark via-tetr-green to-tetr-green-light relative">
-            <div className="absolute inset-0 opacity-[0.07]">
-              <div className="absolute top-6 left-10 w-28 h-28 rounded-full border-2 border-white" />
-              <div className="absolute bottom-2 right-12 w-40 h-40 rounded-full border-2 border-white" />
-              <div className="absolute top-14 right-28 w-14 h-14 rounded-full border-2 border-white" />
-            </div>
+          {/* Cover photo */}
+          <div
+            className="h-[200px] relative"
+            style={
+              profile.coverImageUrl
+                ? {
+                    backgroundImage: `url(${profile.coverImageUrl})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
+          >
+            {/* Fallback gradient when no cover image */}
+            {!profile.coverImageUrl && (
+              <div className="absolute inset-0 bg-gradient-to-br from-tetr-dark via-tetr-green to-tetr-green-light">
+                <div className="absolute inset-0 opacity-[0.07]">
+                  <div className="absolute top-6 left-10 w-28 h-28 rounded-full border-2 border-white" />
+                  <div className="absolute bottom-2 right-12 w-40 h-40 rounded-full border-2 border-white" />
+                  <div className="absolute top-14 right-28 w-14 h-14 rounded-full border-2 border-white" />
+                </div>
+              </div>
+            )}
             {isOwnProfile && (
-              <button className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors" title="Change cover photo (coming soon)">
+              <button
+                onClick={openEditModal}
+                className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors"
+                title="Edit cover photo"
+              >
                 <Camera className="w-4 h-4" />
               </button>
             )}
@@ -291,8 +354,9 @@ export default function ProfilePage() {
                 </div>
                 {isOwnProfile && (
                   <button
+                    onClick={openEditModal}
                     className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
-                    title="Change photo (coming soon)"
+                    title="Change photo"
                   >
                     <Camera className="w-3.5 h-3.5 text-gray-600" />
                   </button>
@@ -348,12 +412,12 @@ export default function ProfilePage() {
                   >
                     Edit Profile
                   </button>
-                  <Link
-                    href="/feed"
+                  <button
+                    onClick={() => setShowCreatePost(true)}
                     className="px-5 py-1.5 border border-tetr-green text-tetr-green text-sm font-semibold rounded-full hover:bg-tetr-green-bg transition-colors"
                   >
                     Add Post
-                  </Link>
+                  </button>
                 </>
               ) : (
                 <>
@@ -426,12 +490,12 @@ export default function ProfilePage() {
               </p>
             </div>
             {isOwnProfile && (
-              <Link
-                href="/feed"
+              <button
+                onClick={() => setShowCreatePost(true)}
                 className="px-4 py-1.5 border border-tetr-green text-tetr-green text-sm font-semibold rounded-full hover:bg-tetr-green-bg transition-colors"
               >
                 Create a post
-              </Link>
+              </button>
             )}
           </div>
 
@@ -478,12 +542,12 @@ export default function ProfilePage() {
                       : `${profile.fullName.split(" ")[0]} hasn't shared any posts yet.`}
                   </p>
                   {isOwnProfile && (
-                    <Link
-                      href="/feed"
+                    <button
+                      onClick={() => setShowCreatePost(true)}
                       className="inline-block mt-3 px-5 py-1.5 bg-tetr-green text-white text-sm font-semibold rounded-full hover:bg-tetr-dark transition-colors"
                     >
                       Create your first post
-                    </Link>
+                    </button>
                   )}
                 </div>
               ) : (
@@ -566,12 +630,23 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Resume */}
+              {/* Resume with Preview */}
               {profile.resumeUrl && (
                 <div>
                   <h3 className="text-base font-bold text-gray-900 mb-2">
                     Resume
                   </h3>
+                  {/* Embed preview if possible */}
+                  {resumeEmbedUrl && (
+                    <div className="mb-3 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                      <iframe
+                        src={resumeEmbedUrl}
+                        className="w-full h-[400px]"
+                        allow="autoplay"
+                        title="Resume Preview"
+                      />
+                    </div>
+                  )}
                   <a
                     href={profile.resumeUrl}
                     target="_blank"
@@ -731,6 +806,77 @@ export default function ProfilePage() {
 
             {/* Modal body */}
             <div className="p-6 space-y-5">
+              {/* Profile Picture URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-gray-400" />
+                    Profile Photo URL
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  value={editForm.avatarUrl}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, avatarUrl: e.target.value })
+                  }
+                  className="input-field"
+                  placeholder="https://example.com/your-photo.jpg"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Paste a direct link to your profile photo (JPG, PNG)
+                </p>
+                {editForm.avatarUrl && (
+                  <div className="mt-2 flex items-center gap-3">
+                    <img
+                      src={editForm.avatarUrl}
+                      alt="Preview"
+                      className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <span className="text-xs text-gray-500">Preview</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cover Image URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Image className="w-4 h-4 text-gray-400" />
+                    Cover Image URL
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  value={editForm.coverImageUrl}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, coverImageUrl: e.target.value })
+                  }
+                  className="input-field"
+                  placeholder="https://example.com/cover-image.jpg"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  A banner image for your profile (recommended: 1584x396px)
+                </p>
+                {editForm.coverImageUrl && (
+                  <div className="mt-2">
+                    <img
+                      src={editForm.coverImageUrl}
+                      alt="Cover preview"
+                      className="w-full h-20 rounded-lg object-cover border border-gray-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <hr className="border-gray-100" />
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Full Name <span className="text-red-500">*</span>
@@ -858,7 +1004,7 @@ export default function ProfilePage() {
                   placeholder="https://drive.google.com/your-resume"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Paste a link to your resume (Google Drive, Dropbox, LinkedIn)
+                  Paste a link to your resume (Google Drive, Dropbox, or direct PDF link)
                 </p>
               </div>
 
@@ -909,6 +1055,31 @@ export default function ProfilePage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════ CREATE POST MODAL ═══════════════════ */}
+      {showCreatePost && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowCreatePost(false)}
+          />
+          <div className="relative w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowCreatePost(false)}
+              className="absolute -top-3 -right-3 z-10 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+            <CreatePost
+              onPostCreated={() => {
+                setShowCreatePost(false);
+                fetchPosts();
+                fetchProfile();
+              }}
+            />
           </div>
         </div>
       )}
