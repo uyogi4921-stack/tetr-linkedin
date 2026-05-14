@@ -1,7 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Check, Link as LinkIcon, Copy } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  MoreHorizontal,
+  Check,
+  Link as LinkIcon,
+  Copy,
+  Trash2,
+  Flag,
+  X,
+  AlertTriangle,
+} from "lucide-react";
 import Avatar from "./Avatar";
 import { useAuth } from "@/lib/useAuth";
 import { formatDistanceToNow } from "date-fns";
@@ -28,9 +40,18 @@ interface PostCardProps {
     likes: { userId: string }[];
   };
   onLikeToggle?: () => void;
+  onDelete?: () => void;
 }
 
-export default function PostCard({ post, onLikeToggle }: PostCardProps) {
+const REPORT_REASONS = [
+  "Spam or misleading",
+  "Harassment or bullying",
+  "Inappropriate content",
+  "False information",
+  "Other",
+];
+
+export default function PostCard({ post, onLikeToggle, onDelete }: PostCardProps) {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes.length);
@@ -40,6 +61,75 @@ export default function PostCard({ post, onLikeToggle }: PostCardProps) {
   const [liking, setLiking] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Menu & modals
+  const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const isOwner = user?.id === post.author.id;
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [showMenu]);
+
+  const handleDelete = async () => {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setDeleted(true);
+        setShowDeleteConfirm(false);
+        onDelete?.();
+      }
+    } catch {
+      // ignore
+    }
+    setDeleteLoading(false);
+  };
+
+  const handleReport = async () => {
+    if (!reportReason) return;
+    setReportSubmitting(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reportReason }),
+      });
+      if (res.ok) {
+        setReportSuccess(true);
+        setTimeout(() => {
+          setShowReportModal(false);
+          setReportSuccess(false);
+          setReportReason("");
+        }, 1500);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to report");
+      }
+    } catch {
+      // ignore
+    }
+    setReportSubmitting(false);
+  };
+
+  if (deleted) return null;
 
   const handleLike = async () => {
     if (liking) return;
@@ -145,9 +235,41 @@ export default function PostCard({ post, onLikeToggle }: PostCardProps) {
                   </span>
                 )}
               </div>
-              <button className="text-tetr-gray hover:text-gray-600 p-1">
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="text-tetr-gray hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+                {showMenu && (
+                  <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30 animate-fade-in">
+                    {isOwner ? (
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete post
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          setShowReportModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Flag className="w-4 h-4" />
+                        Report post
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <p className="text-xs text-tetr-gray capitalize">
               {post.author.role}
@@ -239,6 +361,96 @@ export default function PostCard({ post, onLikeToggle }: PostCardProps) {
       </div>
 
       {showComments && <CommentSection postId={post.id} />}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Delete post?</h3>
+                <p className="text-xs text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="flex-1 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleteLoading ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 animate-fade-in">
+            {reportSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Report submitted</h3>
+                <p className="text-xs text-gray-500 mt-1">Thank you. We&apos;ll review this post.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    <h3 className="font-semibold text-gray-900">Report post</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowReportModal(false);
+                      setReportReason("");
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">Why are you reporting this post?</p>
+                <div className="space-y-2 mb-4">
+                  {REPORT_REASONS.map((reason) => (
+                    <button
+                      key={reason}
+                      onClick={() => setReportReason(reason)}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg border transition-colors ${
+                        reportReason === reason
+                          ? "border-tetr-green bg-tetr-green-bg text-tetr-green font-medium"
+                          : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleReport}
+                  disabled={!reportReason || reportSubmitting}
+                  className="w-full py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {reportSubmitting ? "Submitting..." : "Submit report"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
