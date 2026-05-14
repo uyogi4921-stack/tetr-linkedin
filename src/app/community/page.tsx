@@ -84,7 +84,7 @@ const CLUBS_GROUPS = [
   {
     name: "German Language Club",
     description: "Learn and practice German with fellow TETR students.",
-    url: null,
+    url: "https://chat.whatsapp.com/GfY2ro4ANFQA30ss7xrIsp",
     icon: Languages,
     color: "bg-red-500",
   },
