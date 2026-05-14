@@ -44,9 +44,9 @@ export default function LoginPage() {
               T
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-tetr-dark">Welcome back to TETR</h1>
+          <h1 className="text-2xl font-bold text-tetr-dark">Welcome back to TETR-Connect</h1>
           <p className="text-sm text-tetr-gray mt-1">
-            Your professional community at Tetr College of Business
+            Your community platform at Tetr College of Business
           </p>
         </div>
 
@@ -84,7 +84,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-tetr-gray mt-4">
-          New to TETR?{" "}
+          New to TETR-Connect?{" "}
           <Link href="/register" className="text-tetr-green font-medium hover:underline">
             Create an account
           </Link>

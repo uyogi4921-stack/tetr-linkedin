@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TETR | Professional Networking for Tetr College of Business",
-  description: "Connect with batch-mates, explore opportunities, and build your professional network at Tetr College of Business.",
+  title: "TETR-Connect | Community Platform for Tetr College of Business",
+  description: "Connect with batch-mates, explore opportunities, join clubs, and build your professional network at Tetr College of Business.",
 };
 
 export default function RootLayout({

@@ -16,6 +16,7 @@ import {
   LogOut,
   User,
   Shield,
+  Globe,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -87,6 +88,7 @@ export default function Header() {
     { href: "/clubs", icon: BookOpen, label: "Clubs" },
     { href: "/events", icon: Calendar, label: "Events" },
     { href: "/resources", icon: BookOpen, label: "Resources" },
+    { href: "/community", icon: Globe, label: "Community" },
   ];
 
   return (

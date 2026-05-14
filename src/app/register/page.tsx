@@ -59,7 +59,7 @@ export default function RegisterPage() {
               T
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-tetr-dark">Join TETR</h1>
+          <h1 className="text-2xl font-bold text-tetr-dark">Join TETR-Connect</h1>
           <p className="text-sm text-tetr-gray mt-1">
             Connect with your batch-mates at Tetr College of Business
           </p>
@@ -145,7 +145,7 @@ export default function RegisterPage() {
         </div>
 
         <p className="text-center text-sm text-tetr-gray mt-4">
-          Already on TETR?{" "}
+          Already on TETR-Connect?{" "}
           <Link href="/login" className="text-tetr-green font-medium hover:underline">
             Sign in
           </Link>
