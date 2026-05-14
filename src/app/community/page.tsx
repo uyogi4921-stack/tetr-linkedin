@@ -91,14 +91,14 @@ const CLUBS_GROUPS = [
   {
     name: "Spanish Language Club",
     description: "Learn and practice Spanish with fellow TETR students.",
-    url: null,
+    url: "https://chat.whatsapp.com/BQKGS175FX70F7IvOO8tEf",
     icon: Languages,
     color: "bg-orange-500",
   },
   {
     name: "Hindi Language Club",
     description: "Learn and practice Hindi with fellow TETR students.",
-    url: null,
+    url: "https://chat.whatsapp.com/BQKGS175FX70F7IvOO8tEf",
     icon: Languages,
     color: "bg-blue-500",
   },
