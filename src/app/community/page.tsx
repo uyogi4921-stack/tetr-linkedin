@@ -77,7 +77,7 @@ const CLUBS_GROUPS = [
   {
     name: "Debating Club",
     description: "Debates, courtroom battles, negotiations, crisis simulations, ethical discussions, and strategy-based challenges. Run by Shradhani and Sahasra.",
-    url: null,
+    url: "https://chat.whatsapp.com/D1LIenoVtpq3bU1YL7banC",
     icon: Scale,
     color: "bg-amber-500",
   },
