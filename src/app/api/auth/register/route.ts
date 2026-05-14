@@ -10,6 +10,14 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Full name, email, and password are required." }, { status: 400 });
   }
 
+  if (password.length < 6) {
+    return Response.json({ error: "Password must be at least 6 characters long." }, { status: 400 });
+  }
+
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return Response.json({ error: "Password must contain at least one letter and one number." }, { status: 400 });
+  }
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return Response.json({ error: "An account with this email already exists." }, { status: 409 });

@@ -29,6 +29,18 @@ export async function POST() {
       fileUrl: "/resources/faculty-handbook.pdf",
       type: "Guide",
     },
+    {
+      title: "D2C Report 2025",
+      description: "Comprehensive Direct-to-Consumer industry report with market trends, strategies, and case studies.",
+      fileUrl: "/resources/d2c-report-2025.pdf",
+      type: "Guide",
+    },
+    {
+      title: "Career Labs 2025-26",
+      description: "TETR Career Labs program details for 2025-26 with career development workshops, mentorship, and placement support.",
+      fileUrl: "/resources/career-labs-2025-26.pdf",
+      type: "Guide",
+    },
   ];
 
   for (const r of resources) {

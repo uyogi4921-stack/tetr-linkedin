@@ -16,6 +16,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TETR-Connect | Community Platform for Tetr College of Business",
   description: "Connect with batch-mates, explore opportunities, join clubs, and build your professional network at Tetr College of Business.",
+  applicationName: "TETR-Connect",
+  openGraph: {
+    title: "TETR-Connect",
+    description: "Community platform for Tetr College of Business. Connect with batch-mates, join clubs, and build your professional network.",
+    siteName: "TETR-Connect",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "TETR-Connect",
+    description: "Community platform for Tetr College of Business. Connect with batch-mates, join clubs, and build your professional network.",
+  },
 };
 
 export default function RootLayout({
