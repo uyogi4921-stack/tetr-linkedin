@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/useAuth";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Header from "@/components/Header";
 import Avatar from "@/components/Avatar";
 import {
@@ -15,6 +15,7 @@ import {
   Search as SearchIcon,
   Trash2,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 
 interface TeamMember {
@@ -107,6 +108,17 @@ export default function HackathonDetailPage() {
   const [joinRole, setJoinRole] = useState("");
   const [joinCountry, setJoinCountry] = useState("");
   const [joining, setJoining] = useState(false);
+
+  // Add member
+  const [showAddMember, setShowAddMember] = useState<string | null>(null); // teamId
+  const [memberSearch, setMemberSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: string; fullName: string; avatarUrl: string | null; batch: string | null; expertise: string | null }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; fullName: string } | null>(null);
+  const [addRole, setAddRole] = useState("");
+  const [addCountry, setAddCountry] = useState("");
+  const [adding, setAdding] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [error, setError] = useState("");
 
@@ -237,6 +249,75 @@ export default function HackathonDetailPage() {
       setError("Something went wrong.");
     }
     setJoining(false);
+  };
+
+  // Search users for add member
+  const searchUsers = useCallback((query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    fetch(`/api/users?search=${encodeURIComponent(query.trim())}`)
+      .then((r) => r.json())
+      .then((d) => {
+        // Filter out users already in a team for this hackathon
+        const teamUserIds = new Set(
+          hackathon?.teams.flatMap((t) => t.members.map((m) => m.user.id)) || []
+        );
+        const filtered = (d.users || []).filter(
+          (u: { id: string }) => !teamUserIds.has(u.id)
+        );
+        setSearchResults(filtered);
+      })
+      .catch(() => setSearchResults([]))
+      .finally(() => setSearching(false));
+  }, [hackathon]);
+
+  const handleSearchChange = (value: string) => {
+    setMemberSearch(value);
+    setSelectedUser(null);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => searchUsers(value), 300);
+  };
+
+  const handleAddMember = async (teamId: string) => {
+    setError("");
+    if (!selectedUser) {
+      setError("Please select a user to add.");
+      return;
+    }
+    if (!addRole.trim()) {
+      setError("Role is required for the new member.");
+      return;
+    }
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/hackathons/${hackathonId}/teams/${teamId}/add-member`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          role: addRole.trim(),
+          country: addCountry || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to add member.");
+      } else {
+        setShowAddMember(null);
+        setSelectedUser(null);
+        setMemberSearch("");
+        setAddRole("");
+        setAddCountry("");
+        setSearchResults([]);
+        fetchHackathon();
+      }
+    } catch {
+      setError("Something went wrong.");
+    }
+    setAdding(false);
   };
 
   function formatDate(d: string) {
@@ -388,25 +469,47 @@ export default function HackathonDetailPage() {
                     </div>
                   )}
 
-                  {/* Join button */}
-                  {isActive && !userTeam && !team.isFull && (
-                    <button
-                      onClick={() => {
-                        setShowJoinModal(team.id);
-                        setError("");
-                      }}
-                      className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-tetr-green bg-tetr-green-bg hover:bg-tetr-green/10 rounded-lg transition-colors border border-tetr-green/20"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      Join Team
-                    </button>
-                  )}
+                  {/* Action buttons */}
+                  <div className="mt-3 space-y-2">
+                    {/* Join button — visible to users NOT in any team */}
+                    {isActive && !userTeam && !team.isFull && (
+                      <button
+                        onClick={() => {
+                          setShowJoinModal(team.id);
+                          setError("");
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-tetr-green bg-tetr-green-bg hover:bg-tetr-green/10 rounded-lg transition-colors border border-tetr-green/20"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Join Team
+                      </button>
+                    )}
 
-                  {isMyTeam && (
-                    <div className="mt-2 text-center text-xs text-tetr-green font-medium">
-                      Your team
-                    </div>
-                  )}
+                    {/* Add Member button — visible to team lead when team is NOT full */}
+                    {isActive && isMyTeam && team.createdBy === user.id && !team.isFull && (
+                      <button
+                        onClick={() => {
+                          setShowAddMember(team.id);
+                          setError("");
+                          setSelectedUser(null);
+                          setMemberSearch("");
+                          setAddRole("");
+                          setAddCountry("");
+                          setSearchResults([]);
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Member
+                      </button>
+                    )}
+
+                    {isMyTeam && (
+                      <div className="text-center text-xs text-tetr-green font-medium">
+                        Your team
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -586,6 +689,137 @@ export default function HackathonDetailPage() {
                 className="btn-primary w-full py-2.5 disabled:opacity-50"
               >
                 {joining ? "Joining..." : "Join Team"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Member Modal */}
+      {showAddMember && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900">Add Member to Team</h3>
+              <button
+                onClick={() => {
+                  setShowAddMember(null);
+                  setSelectedUser(null);
+                  setMemberSearch("");
+                  setSearchResults([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Search for user */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Search Student *</label>
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    value={memberSearch}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="input-field pl-9"
+                    placeholder="Type a name to search..."
+                  />
+                  {searching && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                  )}
+                </div>
+
+                {/* Search results dropdown */}
+                {memberSearch.trim().length >= 2 && !selectedUser && (
+                  <div className="mt-1 border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-white shadow-sm">
+                    {searching ? (
+                      <div className="px-3 py-4 text-center text-sm text-gray-400">
+                        Searching...
+                      </div>
+                    ) : searchResults.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-sm text-gray-400">
+                        No students found
+                      </div>
+                    ) : (
+                      searchResults.map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setSelectedUser({ id: u.id, fullName: u.fullName });
+                            setMemberSearch(u.fullName);
+                            setSearchResults([]);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                        >
+                          <Avatar name={u.fullName} avatarUrl={u.avatarUrl} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{u.fullName}</p>
+                            <p className="text-[11px] text-gray-500">{u.batch}{u.expertise ? ` · ${u.expertise}` : ""}</p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Selected user tag */}
+                {selectedUser && (
+                  <div className="mt-2 flex items-center gap-2 bg-tetr-green-bg border border-tetr-green/20 rounded-lg px-3 py-2">
+                    <UserPlus className="w-4 h-4 text-tetr-green shrink-0" />
+                    <span className="text-sm font-medium text-gray-900 flex-1">{selectedUser.fullName}</span>
+                    <button
+                      onClick={() => {
+                        setSelectedUser(null);
+                        setMemberSearch("");
+                      }}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Role for new member */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Their Role *</label>
+                <input
+                  type="text"
+                  value={addRole}
+                  onChange={(e) => setAddRole(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g. UI Designer, Backend Dev"
+                />
+              </div>
+
+              {/* Country */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Their Country</label>
+                <select
+                  value={addCountry}
+                  onChange={(e) => setAddCountry(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Select country</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {getFlag(c)} {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
+
+              <button
+                onClick={() => handleAddMember(showAddMember)}
+                disabled={adding || !selectedUser}
+                className="btn-primary w-full py-2.5 disabled:opacity-50"
+              >
+                {adding ? "Adding..." : "Add to Team"}
               </button>
             </div>
           </div>
