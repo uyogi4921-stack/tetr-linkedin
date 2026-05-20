@@ -87,5 +87,35 @@ export async function POST() {
     }
   }
 
+  // Seed Hackathons
+  const hackathons = [
+    {
+      title: "TETR Innovation Hackathon 2025",
+      description: "48-hour hackathon to build innovative solutions for real-world business challenges. Form teams, brainstorm ideas, and present your solution to a panel of industry judges. Open to all TETR students.",
+      startDate: new Date("2025-06-15T09:00:00Z"),
+      endDate: new Date("2025-06-17T18:00:00Z"),
+      maxTeamSize: 4,
+    },
+    {
+      title: "Sustainability Solutions Sprint",
+      description: "A weekend sprint focused on building sustainable business models and green technology solutions. Partner with fellow students to create impactful sustainability projects.",
+      startDate: new Date("2025-07-05T09:00:00Z"),
+      endDate: new Date("2025-07-06T20:00:00Z"),
+      maxTeamSize: 3,
+    },
+  ];
+
+  for (const h of hackathons) {
+    const existing = await prisma.hackathon.findFirst({ where: { title: h.title } });
+    if (!existing) {
+      await prisma.hackathon.create({
+        data: { ...h, createdBy: user.id },
+      });
+      results.push(`Created hackathon: ${h.title}`);
+    } else {
+      results.push(`Skipped (exists): ${h.title}`);
+    }
+  }
+
   return Response.json({ results });
 }

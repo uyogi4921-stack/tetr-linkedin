@@ -18,23 +18,29 @@ export async function POST(request: Request) {
     return Response.json({ error: "Email is required." }, { status: 400 });
   }
 
+  const normalizedEmail = email.toLowerCase().trim();
+
   // Always return success to prevent email enumeration
   const successResponse = Response.json({
     message: "If an account with that email exists, a new password has been sent.",
   });
 
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  // Check Gmail credentials are configured
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.error("GMAIL_USER or GMAIL_APP_PASSWORD not configured");
+    return Response.json(
+      { error: "Email service is not configured. Please contact admin." },
+      { status: 500 }
+    );
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user) return successResponse;
 
   const newPassword = generatePassword();
   const hashed = await hashPassword(newPassword);
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { password: hashed },
-  });
-
-  // Send email via Gmail SMTP
+  // Send email FIRST — only update password if email succeeds
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -59,7 +65,7 @@ export async function POST(request: Request) {
             <p style="color: #666; font-size: 12px; margin: 0 0 8px 0;">Your new password:</p>
             <p style="color: #1a1a1a; font-size: 20px; font-weight: bold; letter-spacing: 2px; margin: 0; font-family: monospace;">${newPassword}</p>
           </div>
-          <p style="color: #999; font-size: 12px; text-align: center;">Please sign in with this password and change it from your profile settings. If you didn't request this, please contact admin immediately.</p>
+          <p style="color: #999; font-size: 12px; text-align: center;">Please sign in with this password. If you didn't request this, please contact admin immediately.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="color: #bbb; font-size: 11px; text-align: center;">TETR-Connect &middot; Tetr College of Business</p>
         </div>
@@ -68,10 +74,16 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Failed to send password reset email:", err);
     return Response.json(
-      { error: "Failed to send email. Please contact admin." },
+      { error: "Failed to send email. Please try again or contact admin." },
       { status: 500 }
     );
   }
+
+  // Email sent successfully — NOW update the password
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashed },
+  });
 
   return successResponse;
 }

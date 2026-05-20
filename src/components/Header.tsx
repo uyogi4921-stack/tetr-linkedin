@@ -17,6 +17,7 @@ import {
   User,
   Shield,
   Globe,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -88,6 +89,7 @@ export default function Header() {
     { href: "/clubs", icon: BookOpen, label: "Clubs" },
     { href: "/events", icon: Calendar, label: "Events" },
     { href: "/resources", icon: BookOpen, label: "Resources" },
+    { href: "/hackathons", icon: Trophy, label: "Hackathons" },
     { href: "/community", icon: Globe, label: "Community" },
   ];
 
