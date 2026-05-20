@@ -138,6 +138,29 @@ export default function HackathonDetailPage() {
     fetchHackathon();
   }, [fetchHackathon]);
 
+  // Search users for add member — must be before early returns to satisfy hook rules
+  const searchUsers = useCallback((query: string, currentHackathon: Hackathon | null) => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    fetch(`/api/users?search=${encodeURIComponent(query.trim())}`)
+      .then((r) => r.json())
+      .then((d) => {
+        // Filter out users already in a team for this hackathon
+        const teamUserIds = new Set(
+          currentHackathon?.teams.flatMap((t) => t.members.map((m) => m.user.id)) || []
+        );
+        const filtered = (d.users || []).filter(
+          (u: { id: string }) => !teamUserIds.has(u.id)
+        );
+        setSearchResults(filtered);
+      })
+      .catch(() => setSearchResults([]))
+      .finally(() => setSearching(false));
+  }, []);
+
   if (loading || !user || loadingData) {
     return (
       <div className="min-h-screen bg-tetr-gray-light">
@@ -251,34 +274,11 @@ export default function HackathonDetailPage() {
     setJoining(false);
   };
 
-  // Search users for add member
-  const searchUsers = useCallback((query: string) => {
-    if (query.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    fetch(`/api/users?search=${encodeURIComponent(query.trim())}`)
-      .then((r) => r.json())
-      .then((d) => {
-        // Filter out users already in a team for this hackathon
-        const teamUserIds = new Set(
-          hackathon?.teams.flatMap((t) => t.members.map((m) => m.user.id)) || []
-        );
-        const filtered = (d.users || []).filter(
-          (u: { id: string }) => !teamUserIds.has(u.id)
-        );
-        setSearchResults(filtered);
-      })
-      .catch(() => setSearchResults([]))
-      .finally(() => setSearching(false));
-  }, [hackathon]);
-
   const handleSearchChange = (value: string) => {
     setMemberSearch(value);
     setSelectedUser(null);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => searchUsers(value), 300);
+    searchTimeoutRef.current = setTimeout(() => searchUsers(value, hackathon), 300);
   };
 
   const handleAddMember = async (teamId: string) => {
