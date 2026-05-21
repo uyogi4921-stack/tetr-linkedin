@@ -14,6 +14,7 @@ import {
   UserPlus,
   Search as SearchIcon,
   Loader2,
+  LogOut,
 } from "lucide-react";
 
 interface TeamMember {
@@ -115,6 +116,10 @@ export default function HackathonDetailPage() {
   const [addCountry, setAddCountry] = useState("");
   const [adding, setAdding] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Leave team
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState<string | null>(null); // teamId
+  const [leaving, setLeaving] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -312,6 +317,26 @@ export default function HackathonDetailPage() {
     setAdding(false);
   };
 
+  const handleLeaveTeam = async (teamId: string) => {
+    setLeaving(true);
+    try {
+      const res = await fetch(`/api/hackathons/${hackathonId}/teams/${teamId}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to leave team.");
+      } else {
+        setShowLeaveConfirm(null);
+        fetchHackathon();
+      }
+    } catch {
+      setError("Something went wrong.");
+    }
+    setLeaving(false);
+  };
+
   function formatDate(d: string) {
     return new Date(d).toLocaleDateString("en-IN", {
       weekday: "short",
@@ -503,8 +528,18 @@ export default function HackathonDetailPage() {
                     )}
 
                     {isMyTeam && (
-                      <div className="text-center text-xs text-tetr-green font-medium">
-                        Your team
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-tetr-green font-medium">Your team</span>
+                        <button
+                          onClick={() => {
+                            setShowLeaveConfirm(team.id);
+                            setError("");
+                          }}
+                          className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          Leave
+                        </button>
                       </div>
                     )}
                   </div>
@@ -796,6 +831,49 @@ export default function HackathonDetailPage() {
                 className="btn-primary w-full py-2.5 disabled:opacity-50"
               >
                 {adding ? "Adding..." : "Add to Team"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leave Team Confirmation Modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900">Leave Team?</h3>
+              <button onClick={() => setShowLeaveConfirm(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-1">
+              Are you sure you want to leave this team?
+            </p>
+            <p className="text-xs text-gray-400 mb-5">
+              {hackathon.teams.find((t) => t.id === showLeaveConfirm)?.members.length === 1
+                ? "You are the only member — the team will be deleted."
+                : hackathon.teams.find((t) => t.id === showLeaveConfirm)?.createdBy === user.id
+                  ? "Leadership will be transferred to another member."
+                  : "You can rejoin later if there are spots available."}
+            </p>
+
+            {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">{error}</p>}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLeaveConfirm(null)}
+                className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleLeaveTeam(showLeaveConfirm)}
+                disabled={leaving}
+                className="flex-1 py-2.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {leaving ? "Leaving..." : "Leave Team"}
               </button>
             </div>
           </div>
